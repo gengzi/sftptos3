@@ -2,10 +2,7 @@ package com.gengzi.sftp.config;
 
 
 import com.gengzi.sftp.factory.DynamicVirtualFileSystemFactory;
-import com.gengzi.sftp.filter.CustomSftpSubsystemFactory;
-import com.gengzi.sftp.handle.MySftpFileSystemAccessor;
 import com.gengzi.sftp.listener.FileWriteListener;
-import org.apache.sshd.common.file.virtualfs.VirtualFileSystemFactory;
 import org.apache.sshd.common.keyprovider.FileKeyPairProvider;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.auth.password.PasswordAuthenticator;

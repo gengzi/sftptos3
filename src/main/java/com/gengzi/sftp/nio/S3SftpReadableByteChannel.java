@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.BytesWrapper;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.nio.spi.s3.util.TimeOutUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -75,7 +74,7 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
         this.readAheadBuffersCache = Caffeine.newBuilder().maximumSize(maxNumberFragments).recordStats().build();
         this.maxNumberFragments = maxNumberFragments;
         this.open = true;
-        this.timeout = timeout != null ? timeout : TimeOutUtils.TIMEOUT_TIME_LENGTH_5;
+        this.timeout = timeout != null ? timeout : 5L;
         this.timeUnit = timeUnit != null ? timeUnit : TimeUnit.MINUTES;
     }
 
@@ -200,8 +199,7 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
                     path.toUri());
             throw new IOException(e);
         } catch (TimeoutException e) {
-            throw TimeOutUtils.logAndGenerateExceptionOnTimeOut(logger, "read",
-                    TimeOutUtils.TIMEOUT_TIME_LENGTH_5, TimeUnit.MINUTES);
+            throw new RuntimeException(e);
         }
     }
 

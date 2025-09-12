@@ -33,7 +33,6 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static software.amazon.nio.spi.s3.util.TimeOutUtils.createAndLogTimeOutMessage;
 
 public class S3SftpBasicFileAttributes implements BasicFileAttributes {
 
@@ -197,8 +196,7 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
             Thread.currentThread().interrupt();
             throw new IOException(e);
         } catch (TimeoutException e) {
-            var msg = createAndLogTimeOutMessage(logger, "getFileAttributes", timeout.toMillis(), MILLISECONDS);
-            throw new IOException(msg, e);
+            throw new IOException("getFileAttributes time out :"+timeout.toMillis(), e);
         }
     }
 

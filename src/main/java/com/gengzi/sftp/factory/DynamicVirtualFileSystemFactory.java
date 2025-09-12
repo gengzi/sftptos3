@@ -3,8 +3,6 @@ package com.gengzi.sftp.factory;
 import com.gengzi.sftp.nio.S3SftpFileSystemProvider;
 import org.apache.sshd.common.file.FileSystemFactory;
 import org.apache.sshd.common.session.SessionContext;
-import software.amazon.nio.spi.s3.S3XFileSystemProvider;
-import software.amazon.nio.spi.s3.config.S3NioSpiConfiguration;
 
 import java.io.IOException;
 import java.net.URI;

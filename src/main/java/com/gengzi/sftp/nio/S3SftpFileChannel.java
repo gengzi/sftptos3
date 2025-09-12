@@ -1,7 +1,4 @@
 package com.gengzi.sftp.nio;
-
-import software.amazon.nio.spi.s3.NotYetImplementedException;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -569,7 +566,7 @@ public class S3SftpFileChannel extends FileChannel {
      */
     @Override
     public MappedByteBuffer map(MapMode mode, long position, long size) throws IOException {
-        throw new IOException(new NotYetImplementedException("This library current doesn't support MappedByteBuffers"));
+        throw new IOException("This library current doesn't support MappedByteBuffers");
     }
 
     /**

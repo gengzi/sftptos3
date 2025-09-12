@@ -1,6 +1,5 @@
 package com.gengzi;
 
-import com.gengzi.sftp.config.MinIoClientConfig;
 import io.minio.GetObjectArgs;
 import io.minio.MinioClient;
 import io.minio.StatObjectArgs;
