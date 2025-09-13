@@ -2,6 +2,7 @@ package com.gengzi.sftp.nio;
 
 
 import com.gengzi.sftp.nio.util.S3Util;
+import com.gengzi.sftp.s3.client.S3SftpClient;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 import java.io.IOException;
@@ -21,8 +22,7 @@ public class S3SftpSeekableByteChannel implements SeekableByteChannel {
 
 
     public static final long TIMEOUT_TIME_LENGTH_1 = 1L;
-    // 定义一个s3的工具类
-    private final S3Util s3Util;
+
     // 定义position 当前通道读写位置
     private long position;
     // 定义一个close 标志，表示当前文件通道是否已经关闭
@@ -45,9 +45,8 @@ public class S3SftpSeekableByteChannel implements SeekableByteChannel {
     }
 
     // 包含了一个读通道和写通道
-    public S3SftpSeekableByteChannel(S3SftpPath s3Path, S3AsyncClient s3Client, Set<? extends OpenOption> options) throws IOException {
+    public S3SftpSeekableByteChannel(S3SftpPath s3Path, S3SftpClient s3Client, Set<? extends OpenOption> options) throws IOException {
         this.size = -1L;
-        this.s3Util = new S3Util(s3Client, null, null);
         // 初始化position
         this.position = 0L;
         // 初始化
@@ -75,7 +74,7 @@ public class S3SftpSeekableByteChannel implements SeekableByteChannel {
             this.writableByteChannel = null;
         } else if (options.contains(StandardOpenOption.WRITE)) {
             this.readableByteChannel = null;
-            this.writableByteChannel = new S3SftpWritableByteChannel(s3Path, s3Client, options, s3Util);
+            this.writableByteChannel = new S3SftpWritableByteChannel(s3Path, s3Client, options);
         }
 
         // 初始化close为false未关闭

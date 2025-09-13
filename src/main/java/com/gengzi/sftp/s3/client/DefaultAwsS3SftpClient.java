@@ -12,12 +12,15 @@ import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.BytesWrapper;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.core.async.SdkPublisher;
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.awssdk.transfer.s3.model.CopyRequest;
 import software.amazon.awssdk.transfer.s3.model.DownloadFileRequest;
 import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
@@ -28,9 +31,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -99,7 +100,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
         }
     }
 
-    private static CompletableFuture<List> listObjectsRecursively(
+    private static CompletableFuture<List<String>> listObjectsRecursively(
             S3AsyncClient client, ListObjectsV2Request request) {
 
         return client.listObjectsV2(request)
@@ -130,11 +131,12 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
     }
 
     @Override
-    public S3AsyncClient createClient() {
+    public S3AsyncClient createClient(S3SftpNioSpiConfiguration s3SftpNioSpiConfiguration) {
+
         return S3AsyncClient.builder()
-                .endpointOverride(this.configuration.endpointUri())
+                .endpointOverride(s3SftpNioSpiConfiguration.endpointUri())
                 .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(configuration.accessKey(), configuration.secretKey())
+                        AwsBasicCredentials.create(s3SftpNioSpiConfiguration.accessKey(), s3SftpNioSpiConfiguration.secretKey())
                 ))
                 .serviceConfiguration(service -> service
                         .pathStyleAccessEnabled(true)
@@ -158,7 +160,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
         long readTo = offset + length - 1;
         String range = "bytes=" + readFrom + "-" + readTo;
         logger.debug("byte range for {} is '{}'", key, range);
-        try (S3AsyncClient s3AsyncClient = createClient()) {
+        try (S3AsyncClient s3AsyncClient = createClient(configuration)) {
             return s3AsyncClient.getObject(
                             builder -> builder
                                     .bucket(bucketName)
@@ -171,6 +173,67 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
     }
 
     /**
+     * 调用s3创建一个空目录
+     *
+     * @param bucketName
+     * @param directoryKey
+     * @return
+     */
+    @Override
+    public CompletableFuture putObjectToCreateDirectory(String bucketName, String directoryKey) {
+        logger.debug("getObject bucketName:{},directoryKey:{}", bucketName, directoryKey);
+        return createClient(configuration).putObject(
+                PutObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(directoryKey)
+                        .build(),
+                AsyncRequestBody.empty()
+        );
+    }
+
+    /**
+     * 删除一个对象
+     *
+     * @param bucketName
+     * @param deletePathKey
+     * @return
+     */
+    @Override
+    public CompletableFuture<?> deleteObject(String bucketName, String deletePathKey) {
+        logger.debug("deleteObject bucketName:{},deletePathKey:{}", bucketName, deletePathKey);
+        return createClient(configuration).deleteObject(
+                DeleteObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(deletePathKey)
+                        .build()
+        );
+    }
+
+    /**
+     * copy到目标对象
+     *
+     * @param sourceBucketName
+     * @param sourceKey
+     * @param destinationBucketName
+     * @param destinationKey
+     * @return
+     */
+    @Override
+    public CompletableFuture<?> copyObject(String sourceBucketName, String sourceKey, String destinationBucketName, String destinationKey) {
+        try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(createClient(configuration)).build()) {
+            return s3TransferManager.copy(CopyRequest.builder()
+                    .copyObjectRequest(CopyObjectRequest.builder()
+                            .checksumAlgorithm(ChecksumAlgorithm.SHA256)
+                            .sourceBucket(sourceBucketName)
+                            .sourceKey(sourceKey)
+                            .destinationBucket(destinationBucketName)
+                            .destinationKey(destinationKey)
+                            .build())
+                    .build()).completionFuture();
+        }
+    }
+
+    /**
      * 从对象存储中获取文件内容并保存到本地文件中
      *
      * @param bucketName
@@ -180,8 +243,8 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
      */
     @Override
     public CompletableFuture<?> getObjectAndWriteToLocalFile(String bucketName, String key, Path destination) {
-        logger.debug("getObjectAndWriteToLocalFile bucketName:{},key:{},Path:{} ", bucketName, key, destination);
-        try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(createClient()).build()) {
+        logger.info("getObjectAndWriteToLocalFile bucketName:{},key:{},Path:{} ", bucketName, key, destination);
+        try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(createClient(configuration)).build()) {
             return s3TransferManager.downloadFile(
                     DownloadFileRequest.builder()
                             .getObjectRequest(GetObjectRequest.builder()
@@ -204,8 +267,8 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
      */
     @Override
     public CompletableFuture<?> putObjectByLocalFile(String bucketName, String key, Path localFile) {
-        logger.debug("putObjectByLocalFile bucketName:{},key:{},Path:{} ", bucketName, key, localFile);
-        try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(createClient()).build()) {
+        logger.info("putObjectByLocalFile bucketName:{},key:{},Path:{} ", bucketName, key, localFile);
+        try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(createClient(configuration)).build()) {
             return s3TransferManager.uploadFile(
                     UploadFileRequest.builder()
                             .putObjectRequest(PutObjectRequest.builder()
@@ -225,22 +288,23 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
      * 获取当前key目录下的所有文件或者子目录名称
      *
      * @param bucketName
-     * @param key
+     * @param prefixKey
      * @return
      */
     @Override
-    public CompletableFuture<List> getCurrentKeyDirAllFileNames(String bucketName, String key) {
-        logger.debug("getCurrentKeyDirAllFileNames bucketName:{},key:{},Path:{} ", bucketName, key);
+    public CompletableFuture<List<String>> getCurrentKeyDirAllFileNames(String bucketName, String prefixKey) {
+        logger.debug("getCurrentKeyDirAllFileNames bucketName:{},key:{},Path:{} ", bucketName, prefixKey);
         ListObjectsV2Request request = ListObjectsV2Request.builder()
                 .bucket(bucketName)
-                .prefix(key)
+                .prefix(prefixKey)
                 .delimiter("/")
+                .maxKeys(1000)
                 .build();
-        S3AsyncClient client = createClient();
+        S3AsyncClient client = createClient(configuration);
         return listObjectsRecursively(client, request)
                 .whenComplete((v, ex) -> {
                     if (ex != null) {
-                     throw new RuntimeException(ex);
+                        throw new RuntimeException(ex);
                     }
                     client.close();
                 });
@@ -254,8 +318,8 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
      * @return 如果无此对象，必须返回 null
      */
     @Override
-    public ObjectHeadResponse headObject(String bucketName, String key) throws IOException {
-        logger.debug("headObject bucketName:{},key:{} ", bucketName, key);
+    public ObjectHeadResponse headFileOrDirObject(String bucketName, String key) throws IOException {
+        logger.debug("headFileOrDirObject bucketName:{},key:{} ", bucketName, key);
         if (isDirectoryString(key)) {
             ListObjectsV2Publisher objectsAttributes = getObjectsAttributes(bucketName, key);
             return getDirHeadResponse(key, objectsAttributes);
@@ -277,12 +341,36 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
 
     }
 
+    /**
+     * 获取对象的基础元信息
+     *
+     * @param bucketName
+     * @param key
+     * @return 如果无此对象，必须返回 null
+     */
+    @Override
+    public ObjectHeadResponse headObject(String bucketName, String key) throws IOException {
+        logger.debug("headObject bucketName:{},key:{} ", bucketName, key);
+        HeadObjectResponse response = getObjectAttributes(bucketName, key);
+        if (response == null) {
+            return null;
+        }
+        return new ObjectHeadResponse(
+                FileTime.from(response.lastModified()),
+                response.contentLength(),
+                response.eTag(),
+                false,
+                true,
+                false
+        );
+    }
+
 
     private HeadObjectResponse getObjectAttributes(String bucketName, String key) throws IOException {
         Long timeout = this.configuration.timeout();
         TimeUnit timeUnit = this.configuration.timeoutUnit();
         try {
-            return createClient().headObject(req -> req
+            return createClient(configuration).headObject(req -> req
                     .bucket(bucketName)
                     .key(key)
             ).get(timeout, timeUnit);
@@ -301,13 +389,13 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
             Thread.currentThread().interrupt();
             throw new IOException(e);
         } catch (TimeoutException e) {
-            throw new IOException("getFileAttributes timeout " + timeout + ",timeUnit" + timeUnit.toString(), e);
+            throw new IOException( "path "+ key +"getFileAttributes timeout " + timeout + ",timeUnit" + timeUnit.toString(), e);
         }
     }
 
     private ListObjectsV2Publisher getObjectsAttributes(String bucketName, String key) {
         String keyDir = normalizePath(key);
-        return createClient().listObjectsV2Paginator(req -> req
+        return createClient(configuration).listObjectsV2Paginator(req -> req
                 .bucket(bucketName)
                 .prefix(keyDir)
                 .delimiter(Constants.PATH_SEPARATOR));

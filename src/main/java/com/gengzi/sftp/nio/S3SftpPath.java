@@ -76,6 +76,11 @@ public class S3SftpPath implements Path {
         }
     }
 
+
+    /**
+     * TODO 可能要修改
+     * @return
+     */
     @Override
     public Path getParent() {
         var size = pathRepresentation.elements().size();
@@ -491,6 +496,10 @@ public class S3SftpPath implements Path {
      * 处理path路径
      * 如果为空，返回用户根目录
      * 如果不为空，返回用户目录下的文件路径
+     *
+     * ./testDir
+     *
+     * /./testDir
      *
      *
      * @return

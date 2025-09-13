@@ -1,8 +1,7 @@
 package com.gengzi.sftp.nio;
 
-import com.gengzi.sftp.nio.util.S3Util;
+import com.gengzi.sftp.s3.client.S3SftpClient;
 import org.checkerframework.checker.nullness.qual.NonNull;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -12,8 +11,6 @@ import java.nio.channels.WritableByteChannel;
 import java.nio.file.*;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
 
 /**
@@ -26,21 +23,16 @@ public class S3SftpWritableByteChannel implements WritableByteChannel {
     private final SeekableByteChannel channel;
     // 定义一个临时文件
     private final Path tempFile;
+    private final S3SftpPath s3SftpPath;
+    private final S3SftpClient s3SftpClient;
     // 定义当前通道是否打开
     private boolean isOpen = false;
 
 
-    private final S3Util s3Util;
-
-    private final S3SftpPath s3SftpPath;
-
-
-
-    public S3SftpWritableByteChannel(S3SftpPath s3SftpPath, S3AsyncClient s3Client,
-                                     Set<? extends OpenOption> options, S3Util s3Util) throws IOException {
-
-        this.s3Util = s3Util;
+    public S3SftpWritableByteChannel(S3SftpPath s3SftpPath, S3SftpClient s3Client,
+                                     Set<? extends OpenOption> options) throws IOException {
         this.s3SftpPath = s3SftpPath;
+        this.s3SftpClient = s3Client;
         // 判断当前文件是否存在
         S3SftpFileSystemProvider provider = (S3SftpFileSystemProvider) s3SftpPath.getFileSystem().provider();
         Boolean exists = provider.exists(s3Client, s3SftpPath);
@@ -59,10 +51,9 @@ public class S3SftpWritableByteChannel implements WritableByteChannel {
         this.tempFile = Files.createTempFile("s3-sftp-tmp", ".tmp");
         if (exists) {
             // 下载文件到本地临时
-            s3Util.downloadToLocalFile(s3SftpPath, tempFile);
+            s3Client.getObjectAndWriteToLocalFile(s3SftpPath.bucketName(), s3SftpPath.getKey(), tempFile);
         }
         channel = Files.newByteChannel(this.tempFile, removeCreateNew(options));
-
 
         this.isOpen = true;
     }
@@ -141,9 +132,8 @@ public class S3SftpWritableByteChannel implements WritableByteChannel {
     }
 
     /**
-     *
      * 强制依赖close 方法执行，才能上传文件
-     *
+     * <p>
      * Closes this channel.
      *
      * <p> After a channel is closed, any further attempt to invoke I/O
@@ -167,7 +157,7 @@ public class S3SftpWritableByteChannel implements WritableByteChannel {
             return;
         }
         // 上传文件到对象存储
-        s3Util.uploadLocalFile(s3SftpPath, tempFile);
+        s3SftpClient.putObjectByLocalFile(s3SftpPath.bucketName(), s3SftpPath.getKey(), tempFile);
         // 删除临时文件
         Files.deleteIfExists(tempFile);
 
@@ -175,10 +165,10 @@ public class S3SftpWritableByteChannel implements WritableByteChannel {
     }
 
     protected void force() throws IOException {
-        if(!isOpen){
+        if (!isOpen) {
             throw new ClosedChannelException();
         }
-        s3Util.uploadLocalFile(s3SftpPath, tempFile);
+        s3SftpClient.putObjectByLocalFile(s3SftpPath.bucketName(), s3SftpPath.getKey(), tempFile);
     }
 
 }

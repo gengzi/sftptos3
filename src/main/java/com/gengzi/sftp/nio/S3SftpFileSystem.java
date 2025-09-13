@@ -1,6 +1,9 @@
 package com.gengzi.sftp.nio;
 
 import com.gengzi.sftp.nio.constans.Constants;
+import com.gengzi.sftp.s3.client.AbstractS3SftpClient;
+import com.gengzi.sftp.s3.client.S3ClientFactory;
+import com.gengzi.sftp.s3.client.S3SftpClient;
 import org.jetbrains.annotations.NotNull;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 
@@ -27,7 +30,7 @@ public class S3SftpFileSystem extends FileSystem {
     private final S3SftpFileSystemProvider s3SftpFileSystemProvider;
     private final S3SftpNioSpiConfiguration s3SftpNioSpiConfiguration;
     private final String bucketName;
-    private final S3SftpClientProvider s3SftpClientProvider;
+    private final S3SftpClient s3Client;
     private boolean open = true;
 
     // 定义一个集合存储所有的channel
@@ -47,16 +50,18 @@ public class S3SftpFileSystem extends FileSystem {
         // 桶信息
         this.bucketName = config.getBucketName();
         // 根据配置创建s3client
-        this.s3SftpClientProvider = new S3SftpClientProvider(config);
+        this.s3Client = S3ClientFactory.getS3Client(config.clientName().name(), config);
+    }
+
+    public S3SftpClient client() {
+        return this.s3Client;
     }
 
     S3SftpNioSpiConfiguration configuration(){
         return s3SftpNioSpiConfiguration;
     }
 
-    public S3AsyncClient client() {
-        return s3SftpClientProvider.generateClient(bucketName);
-    }
+
 
 
     @Override

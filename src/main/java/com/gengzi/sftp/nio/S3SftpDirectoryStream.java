@@ -13,6 +13,10 @@ import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Path;
 import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 
 public class S3SftpDirectoryStream implements DirectoryStream {
@@ -29,39 +33,35 @@ public class S3SftpDirectoryStream implements DirectoryStream {
     private Iterator<Path> dirs;
 
 
-    public S3SftpDirectoryStream(S3SftpFileSystem fileSystem, String bucketName, String path, DirectoryStream.Filter<? super Path> filter) {
+    public S3SftpDirectoryStream(S3SftpFileSystem fileSystem, String bucketName, String path, DirectoryStream.Filter<? super Path> filter)  {
         this.path = path;
         this.bucketName = bucketName;
         this.fileSystem = fileSystem;
         this.filter = filter;
 
-        ListObjectsV2Publisher listObjectsV2Publisher = fileSystem.client().listObjectsV2Paginator(req -> req
-                .bucket(bucketName)
-                .prefix(path)
-                .delimiter(Constants.PATH_SEPARATOR));
-
-        dirs = pathIteratorForPublisher(listObjectsV2Publisher, fileSystem, path, filter);
-
-
+        CompletableFuture<List<String>> currentKeyDirAllFileNames = fileSystem.client().getCurrentKeyDirAllFileNames(bucketName, path);
+        try {
+            List<String> fileNames = currentKeyDirAllFileNames.get(fileSystem.configuration().timeout(), fileSystem.configuration().timeoutUnit());
+            dirs = fileNames.stream()
+                    .map(fileName -> fileSystem.getPath(fileName))
+                    .filter(s3Sftppath -> !isEqualToParent(path, s3Sftppath))
+                    .filter(s3Sftppath -> tryAccept(filter, s3Sftppath))
+                    .iterator();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        } catch (TimeoutException e) {
+            logger.error("getCurrentKeyDirAllFileNames time out");
+            throw new RuntimeException(e);
+        }
     }
 
     private static boolean isEqualToParent(String finalDirName, Path p) {
         return ((S3SftpPath) p).getKey().equals(finalDirName);
     }
 
-    Iterator<Path> pathIteratorForPublisher(ListObjectsV2Publisher listObjectsV2Publisher, S3SftpFileSystem fs, String finalDirName, DirectoryStream.Filter<? super Path> filter) {
-        final Publisher<String> prefixPublisher =
-                listObjectsV2Publisher.commonPrefixes().map(CommonPrefix::prefix);
-        final Publisher<String> keysPublisher =
-                listObjectsV2Publisher.contents().map(S3Object::key);
-        return Flowable.concat(prefixPublisher, keysPublisher)
-                .map(fs::getPath)
-                .filter(path -> !isEqualToParent(finalDirName, path))  // including the parent will induce loops
-                .filter(path -> tryAccept(filter, path))
-                .blockingIterable()
-                .iterator();
-
-    }
 
     private boolean tryAccept(DirectoryStream.Filter<? super Path> filter, Path path) {
         try {

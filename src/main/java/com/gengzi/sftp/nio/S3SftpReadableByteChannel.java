@@ -1,14 +1,12 @@
 package com.gengzi.sftp.nio;
 
+import com.gengzi.sftp.s3.client.S3SftpClient;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.core.BytesWrapper;
-import software.amazon.awssdk.core.async.AsyncResponseTransformer;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -28,7 +26,7 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
 
 
     private static final Logger logger = LoggerFactory.getLogger(S3SftpReadableByteChannel.class);
-    private final S3AsyncClient client;
+    private final S3SftpClient client;
     private final S3SftpPath path;
     private final S3SftpSeekableByteChannel delegator;
     private final int maxFragmentSize;
@@ -37,12 +35,11 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
     private final long size;
     private final Long timeout;
     private final TimeUnit timeUnit;
-    private boolean open;
     private final Cache<Integer, CompletableFuture<ByteBuffer>> readAheadBuffersCache;
+    private boolean open;
 
 
     /**
-     *
      * @param path
      * @param maxFragmentSize
      * @param maxNumberFragments
@@ -52,8 +49,8 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
      * @param timeUnit
      * @throws IOException
      */
-    S3SftpReadableByteChannel(S3SftpPath path, int maxFragmentSize, int maxNumberFragments, S3AsyncClient client,
-                           S3SftpSeekableByteChannel delegator, Long timeout, TimeUnit timeUnit) throws IOException {
+    S3SftpReadableByteChannel(S3SftpPath path, int maxFragmentSize, int maxNumberFragments, S3SftpClient client,
+                              S3SftpSeekableByteChannel delegator, Long timeout, TimeUnit timeUnit) throws IOException {
         Objects.requireNonNull(path);
         Objects.requireNonNull(client);
         Objects.requireNonNull(delegator);
@@ -77,8 +74,6 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
         this.timeout = timeout != null ? timeout : 5L;
         this.timeUnit = timeUnit != null ? timeUnit : TimeUnit.MINUTES;
     }
-
-
 
 
     /**
@@ -128,7 +123,7 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
      */
     @Override
     public int read(ByteBuffer dst) throws IOException {
-        logger.info("dst read length:{}",dst.limit() - dst.position());
+        logger.info("dst read length:{}", dst.limit() - dst.position());
         Objects.requireNonNull(dst);
 
         var channelPosition = delegator.position();
@@ -185,7 +180,7 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
             }
 
             delegator.position(channelPosition + copiedBytes.length);
-            logger.info("read data length:{}",copiedBytes.length);
+            logger.info("read data length:{}", copiedBytes.length);
             return copiedBytes.length;
 
         } catch (InterruptedException e) {
@@ -275,17 +270,10 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
 
     private CompletableFuture<ByteBuffer> computeFragmentFuture(int fragmentIndex) {
         var readFrom = (long) fragmentIndex * maxFragmentSize;
-        var readTo = Math.min(readFrom + maxFragmentSize, size) - 1;
-        var range = "bytes=" + readFrom + "-" + readTo;
-        logger.debug("byte range for {} is '{}'", path.getKey(), range);
+        var length = Math.min(readFrom + maxFragmentSize, size);
+        logger.debug("byte range for {} readForm '{}' length '{}'", path.getKey(), readFrom, length);
 
-        return client.getObject(
-                        builder -> builder
-                                .bucket(path.bucketName())
-                                .key(path.getKey())
-                                .range(range),
-                        AsyncResponseTransformer.toBytes())
-                .thenApply(BytesWrapper::asByteBuffer);
+        return client.getObject(path.bucketName(), path.getKey(), readFrom, length);
     }
 
     /**

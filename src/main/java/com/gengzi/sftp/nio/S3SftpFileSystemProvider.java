@@ -1,15 +1,12 @@
 package com.gengzi.sftp.nio;
 
 import com.gengzi.sftp.nio.constans.Constants;
+import com.gengzi.sftp.s3.client.S3SftpClient;
+import com.gengzi.sftp.s3.client.entity.ObjectHeadResponse;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.core.async.AsyncRequestBody;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.*;
-import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.CompletedCopy;
-import software.amazon.awssdk.transfer.s3.model.CopyRequest;
 
 import java.io.IOException;
 import java.net.URI;
@@ -24,7 +21,6 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -34,18 +30,15 @@ import static java.util.concurrent.TimeUnit.MINUTES;
  * 创建和管理文件系统实例（FileSystem）
  * 将 URI 转换为文件系统路径（Path）
  * 执行具体的文件操作（创建、删除、复制、移动文件 / 目录等）
- *
- *
  */
 public class S3SftpFileSystemProvider extends FileSystemProvider {
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
     // 文件系统前缀标识
     static final String SCHEME = "s3sftp";
     // 文件分隔符
     static final String PATH_SEPARATOR = Constants.PATH_SEPARATOR;
     // 缓存已经创建的S3SftpFileSystem
     private static final Map<String, S3SftpFileSystem> FS_CACHE = new ConcurrentHashMap<>();
-
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     static S3SftpPath checkPath(Path obj) {
         Objects.requireNonNull(obj);
@@ -53,6 +46,30 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
             throw new ProviderMismatchException();
         }
         return (S3SftpPath) obj;
+    }
+
+    private static void delPath(S3SftpClient s3Client, String bucketName, String deletePathKey, Long timeout, TimeUnit timeUnit) {
+        try {
+            s3Client.deleteObject(bucketName, deletePathKey).get(timeout, timeUnit);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        } catch (TimeoutException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static List<String> getContainedObjectBatches(
+            S3SftpClient s3Client,
+            String bucketName,
+            String prefix,
+            long timeOut,
+            TimeUnit unit
+    ) throws InterruptedException, ExecutionException, TimeoutException {
+        CompletableFuture<List<String>> currentKeyDirAllFileNames = s3Client.getCurrentKeyDirAllFileNames(bucketName, prefix);
+        return currentKeyDirAllFileNames.get(timeOut, unit);
     }
 
     @Override
@@ -93,7 +110,7 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
     public FileSystem getFileSystem(URI uri) {
         S3SftpFileSystemInfo info = new S3SftpFileSystemInfo(uri);
         S3SftpFileSystem s3SftpFileSystem = FS_CACHE.get(info.key());
-        if(s3SftpFileSystem == null){
+        if (s3SftpFileSystem == null) {
             throw new FileSystemNotFoundException(info.key());
         }
         return s3SftpFileSystem;
@@ -168,13 +185,9 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
             directoryKey = directoryKey + PATH_SEPARATOR;
         }
         try {
-            s3Directory.getFileSystem().client().putObject(
-                    PutObjectRequest.builder()
-                            .bucket(s3Directory.bucketName())
-                            .key(directoryKey)
-                            .build(),
-                    AsyncRequestBody.empty()
-            ).get(1L, MINUTES);
+            S3SftpFileSystem fileSystem = s3Directory.getFileSystem();
+            fileSystem.client().putObjectToCreateDirectory(s3Directory.bucketName(), directoryKey)
+                    .get(fileSystem.configuration().timeout(), fileSystem.configuration().timeoutUnit());
         } catch (TimeoutException e) {
             throw new RuntimeException(e);
         } catch (InterruptedException e) {
@@ -196,56 +209,34 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
         S3SftpPath deletePath = checkPath(path);
         String deletePathKey = deletePath.toRealPath(LinkOption.NOFOLLOW_LINKS).getKey();
         // 判断如果是根目录，不允许删除
-        S3AsyncClient s3Client = deletePath.getFileSystem().client();
+        S3SftpClient s3Client = deletePath.getFileSystem().client();
         S3SftpBasicFileAttributes s3SftpBasicFileAttributes = S3SftpBasicFileAttributes.get(deletePath, null);
         boolean directory = s3SftpBasicFileAttributes.isDirectory();
         String bucketName = deletePath.bucketName();
-        if(!directory){
+        S3SftpNioSpiConfiguration configuration = deletePath.getFileSystem().configuration();
+        Long timeout = configuration.timeout();
+        TimeUnit timeoutUnit = configuration.timeoutUnit();
+        if (!directory) {
             // 是文件，可以删除
-            delPath(s3Client, bucketName, deletePathKey);
+            delPath(s3Client, bucketName, deletePathKey, timeout, timeoutUnit);
         }
-        if(directory){
+        if (directory) {
             boolean emptyDirectory = s3SftpBasicFileAttributes.isEmptyDirectory();
-            if(emptyDirectory){
+            if (emptyDirectory) {
                 // 是空目录，可以删除
-                delPath(s3Client, bucketName, deletePathKey);
-            }else{
+                delPath(s3Client, bucketName, deletePathKey, timeout, timeoutUnit);
+            } else {
                 throw new DirectoryNotEmptyException("dir is not empty");
             }
         }
     }
 
-    private static void delPath(S3AsyncClient s3Client, String bucketName, String deletePathKey) {
-        try {
-            s3Client.deleteObject(
-                    DeleteObjectRequest.builder()
-                            .bucket(bucketName)
-                            .key(deletePathKey)
-                            .build()
-            ).get(1L, MINUTES);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        } catch (ExecutionException e) {
-            throw new RuntimeException(e);
-        } catch (TimeoutException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     /**
-     *
      * 用于复制文件或目录
      *
-     *
-     *
-     * @param source
-     *          the path to the file to copy
-     * @param target
-     *          the path to the target file
-     * @param options
-     *          options specifying how the copy should be done
-     *
+     * @param source  the path to the file to copy
+     * @param target  the path to the target file
+     * @param options options specifying how the copy should be done
      * @throws IOException
      */
     @Override
@@ -269,24 +260,20 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
         try {
             var sourcePrefix = s3SourcePath.toRealPath(NOFOLLOW_LINKS).getKey();
 
-            List<List<ObjectIdentifier>> sourceKeys;
+            List<String> sourceKeys;
             String prefixWithSeparator;
             if (s3SourcePath.isDirectory()) {
                 sourceKeys = getContainedObjectBatches(s3Client, sourceBucket, sourcePrefix, timeOut, unit);
                 prefixWithSeparator = sourcePrefix;
             } else {
-                sourceKeys = List.of(List.of(ObjectIdentifier.builder().key(sourcePrefix).build()));
+                sourceKeys = List.of(sourcePrefix);
                 prefixWithSeparator = sourcePrefix.substring(0, sourcePrefix.lastIndexOf(PATH_SEPARATOR)) + PATH_SEPARATOR;
             }
 
-            try (var s3TransferManager = S3TransferManager.builder().s3Client(s3Client).build()) {
-                for (var keyList : sourceKeys) {
-                    for (var objectIdentifier : keyList) {
-                        copyKey(objectIdentifier.key(), prefixWithSeparator, sourceBucket, s3TargetPath, s3TransferManager,
-                                fileExistsAndCannotReplace).get(timeOut, unit);
-                    }
-                }
+            for (var key : sourceKeys) {
+                copyKey(s3Client,key, prefixWithSeparator, sourceBucket, s3TargetPath, fileExistsAndCannotReplace).get(timeOut, unit);
             }
+
         } catch (TimeoutException e) {
             throw new IOException(e);
         } catch (ExecutionException e) {
@@ -298,38 +285,7 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
 
     }
 
-    private static List<List<ObjectIdentifier>> getContainedObjectBatches(
-            S3AsyncClient s3Client,
-            String bucketName,
-            String prefix,
-            long timeOut,
-            TimeUnit unit
-    ) throws InterruptedException, ExecutionException, TimeoutException {
-        String continuationToken = null;
-        var hasMoreItems = true;
-        List<List<ObjectIdentifier>> keys = new ArrayList<>();
-        final var requestBuilder = ListObjectsV2Request.builder().bucket(bucketName).prefix(prefix);
-
-        while (hasMoreItems) {
-            var finalContinuationToken = continuationToken;
-            var response = s3Client.listObjectsV2(
-                    requestBuilder.continuationToken(finalContinuationToken).build()
-            ).get(timeOut, unit);
-            var objects = response.contents()
-                    .stream()
-                    .filter(s3Object -> s3Object.key().equals(prefix) || s3Object.key().startsWith(prefix))
-                    .map(s3Object -> ObjectIdentifier.builder().key(s3Object.key()).build())
-                    .collect(Collectors.toList());
-            if (!objects.isEmpty()) {
-                keys.add(objects);
-            }
-            hasMoreItems = response.isTruncated();
-            continuationToken = response.nextContinuationToken();
-        }
-        return keys;
-    }
-
-    private Function<S3SftpPath, Boolean> cannotReplaceAndFileExistsCheck(CopyOption[] options, S3AsyncClient s3Client) {
+    private Function<S3SftpPath, Boolean> cannotReplaceAndFileExistsCheck(CopyOption[] options, S3SftpClient s3Client) {
         final var canReplaceFile = Arrays.asList(options).contains(StandardCopyOption.REPLACE_EXISTING);
 
         return (S3SftpPath destination) -> {
@@ -341,11 +297,11 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
     }
 
     private CompletableFuture<CompletedCopy> copyKey(
+            S3SftpClient s3Client,
             String sourceObjectIdentifierKey,
             String sourcePrefix,
             String sourceBucket,
             S3SftpPath targetPath,
-            S3TransferManager transferManager,
             Function<S3SftpPath, Boolean> fileExistsAndCannotReplaceFn
     ) throws FileAlreadyExistsException {
         final var sanitizedIdKey = sourceObjectIdentifierKey.replaceFirst(sourcePrefix, "");
@@ -359,15 +315,7 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
             throw new FileAlreadyExistsException("File already exists at the target key");
         }
 
-        return transferManager.copy(CopyRequest.builder()
-                .copyObjectRequest(CopyObjectRequest.builder()
-                        .checksumAlgorithm(ChecksumAlgorithm.SHA256)
-                        .sourceBucket(sourceBucket)
-                        .sourceKey(sourceObjectIdentifierKey)
-                        .destinationBucket(targetPath.bucketName())
-                        .destinationKey(targetPath.getKey())
-                        .build())
-                .build()).completionFuture();
+        return s3Client.copyObject(sourceBucket, sourceObjectIdentifierKey, targetPath.bucketName(), targetPath.getKey());
     }
 
     @Override
@@ -419,10 +367,10 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
     public <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
         Objects.requireNonNull(type, "the type of attribute view required cannot be null");
         S3SftpPath s3SftpPath = checkPath(path);
-        if(type.equals(BasicFileAttributes.class)){
+        if (type.equals(BasicFileAttributes.class)) {
             S3SftpFileAttributeView s3SftpFileAttributeView = new S3SftpFileAttributeView(s3SftpPath);
             return (V) s3SftpFileAttributeView;
-        }else{
+        } else {
             return null;
         }
     }
@@ -483,18 +431,17 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
      *
      * @param s3SftpPath 文件
      */
-    public Boolean exists(S3AsyncClient s3AsyncClient, S3SftpPath s3SftpPath) {
+    public Boolean exists(S3SftpClient s3Client, S3SftpPath s3SftpPath) {
         try {
-            //TODO 配置类
-            s3AsyncClient.headObject(HeadObjectRequest.builder().bucket(s3SftpPath.bucketName()).key(s3SftpPath.getKey()).build())
-                    .get(1L, MINUTES);
+            ObjectHeadResponse objectHeadResponse = s3Client.headObject(s3SftpPath.bucketName(), s3SftpPath.getKey());
+            if (objectHeadResponse == null) {
+                return false;
+            }
             return true;
-        } catch (ExecutionException | NoSuchKeyException | InterruptedException | TimeoutException e) {
+        } catch (IOException e) {
             logger.debug("Could not retrieve object head information", e);
             return false;
         }
-
-
     }
 
     void closeFileSystem(FileSystem fs) {

@@ -78,3 +78,15 @@ win 启动命令
 访问地址：http://127.0.0.1:9000
 
 
+
+
+### apche  sshd sftp
+---  不允许删除目录
+```
+org.apache.sshd.sftp.server.AbstractSftpSubsystemHelper.doRemoveFile
+else if (Files.isDirectory(p, options)) {
+throw signalRemovalPreConditionFailure(id, path, p,
+new SftpException(SftpConstants.SSH_FX_FILE_IS_A_DIRECTORY, p.toString() + " is a folder"), false);
+}
+```
+

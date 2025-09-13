@@ -14,8 +14,6 @@ import java.util.regex.Pattern;
 
 /**
  * 存放配置s3sftp配置项
- *
- *
  */
 public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
 
@@ -26,10 +24,7 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
 
     // 默认超时时间
     public static final String TIME_OUT = "s3sftp.timeout";
-    public static Long TIME_OUT_VAL = 60L;
     public static final String TIME_OUT_UNIT = "s3sftp.timeoutUnit";
-    public static TimeUnit TIME_OUT_UNIT_VAL = TimeUnit.MILLISECONDS;
-
     // env配置项
     // 默认用户根目录
     public static final String USER_ROOT_PATH = "s3sftp.userRootPath";
@@ -37,10 +32,9 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
     // 默认客户端实现
     public static final String CLIENT_NAME = "s3sftp.clientName";
     public static final S3ClientNameEnum CLIENT_NAME_DEFAULT_VAL = S3ClientNameEnum.DEFAULT_AWS_S3;
-
-
     private static final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
-
+    public static Long TIME_OUT_VAL = 5 * 60L;
+    public static TimeUnit TIME_OUT_UNIT_VAL = TimeUnit.MILLISECONDS;
     // 桶
     private String bucketName;
 

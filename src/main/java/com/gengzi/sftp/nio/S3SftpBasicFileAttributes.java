@@ -1,39 +1,18 @@
 package com.gengzi.sftp.nio;
 
 
-import com.gengzi.sftp.nio.constans.Constants;
-import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.core.Maybe;
-import io.reactivex.rxjava3.core.Single;
-import io.reactivex.rxjava3.disposables.Disposable;
-import org.jetbrains.annotations.NotNull;
+import com.gengzi.sftp.s3.client.S3SftpClient;
+import com.gengzi.sftp.s3.client.entity.ObjectHeadResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.publisher.Flux;
-import software.amazon.awssdk.core.SdkPojo;
-import software.amazon.awssdk.core.async.SdkPublisher;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.CommonPrefix;
-import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
-import software.amazon.awssdk.services.s3.model.S3Object;
-import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermission;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
-
-import static java.lang.String.format;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-
 public class S3SftpBasicFileAttributes implements BasicFileAttributes {
 
     private static final Logger logger = LoggerFactory.getLogger(S3SftpBasicFileAttributes.class.getName());
@@ -90,113 +69,22 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
 
     public static S3SftpBasicFileAttributes get(S3SftpPath path, Duration duration) throws IOException {
 
-        // 如果是目录就返回固定的属性
-        if (path.isDirectory()) {
-            return getS3SftpDirBasicFileAttributes(path);
-        }
-        // 是文件，调用s3返回文件属性
-        var headResponse = getObjectMetadata(path, Duration.ofMinutes(5));
-        if(headResponse == null){
-            // 不存在该键，判断是否为目录
-            return getS3SftpDirBasicFileAttributes(path);
-        }
-        return new S3SftpBasicFileAttributes(
-                FileTime.from(headResponse.lastModified()),
-                headResponse.contentLength(),
-                headResponse.eTag(),
-                false,
-                true,
-                false,
-                posixFilePermissions
-        );
 
-    }
-
-    @NotNull
-    private static S3SftpBasicFileAttributes getS3SftpDirBasicFileAttributes(S3SftpPath path) throws NoSuchFileException {
-        String dir = normalizePath(path.getKey());
-        ListObjectsV2Publisher result = listObjectsV2Paginator(path, dir);
-
-        SdkPublisher<S3Object> contents = result.contents();
-        SdkPublisher<CommonPrefix> commonPrefixSdkPublisher = result.commonPrefixes();
-        Single<Boolean> empty = Flowable.concat(commonPrefixSdkPublisher, contents).isEmpty();
-
-        Flowable<CommonPrefix> commonPrefixFlowable = Flowable.fromPublisher(commonPrefixSdkPublisher);
-        Flowable<S3Object> contentsFlowable = Flowable.fromPublisher(contents);
-        Set<? extends SdkPojo> collect = Flowable.concat(commonPrefixSdkPublisher, contents).toList().blockingGet().stream().collect(Collectors.toSet());
-
-        logger.info("ListObjectsV2Publisher:{}", path.getKey());
-
-        if(!empty.blockingGet()){
-            // 判断是否为空目录
-            if(commonPrefixFlowable.isEmpty().blockingGet() && contentsFlowable.count().blockingGet() == 1L){
-                Maybe<S3Object> s3ObjectMaybe = contentsFlowable.take(1).singleElement();
-                S3Object s3Object = s3ObjectMaybe.blockingGet();
-                String key = s3Object.key();
-                if(key.equals(dir)){
-                    DIRECTORY_ATTRIBUTES.isEmptyDirectory = true;
-                }
-            }
+        S3SftpClient client = path.getFileSystem().client();
+        ObjectHeadResponse objectHeadResponse = client.headFileOrDirObject(path.bucketName(), path.getKey());
+        if(objectHeadResponse.isDirectory()){
+            DIRECTORY_ATTRIBUTES.isEmptyDirectory = objectHeadResponse.isEmptyDirectory();
             return DIRECTORY_ATTRIBUTES;
         }else{
-            throw new NoSuchFileException("no path");
-        }
-    }
-
-    /**
-     * 规范化路径：确保路径以 "/" 结尾，统一前缀格式
-     * 例如："docs" → "docs/", "docs/" → "docs/"
-     */
-    private static String normalizePath(String path) {
-        if (path == null || path.isEmpty()) {
-            return ""; // 空路径表示根目录
-        }
-        return path.endsWith("/") ? path : path + "/";
-    }
-
-
-    private static ListObjectsV2Publisher listObjectsV2Paginator(S3SftpPath path, String dir){
-        S3AsyncClient client = path.getFileSystem().client();
-        ListObjectsV2Publisher listObjectsV2Publisher = client.listObjectsV2Paginator(req -> req
-                .bucket(path.bucketName())
-                .prefix(dir)
-                .delimiter(Constants.PATH_SEPARATOR));
-        return listObjectsV2Publisher;
-    }
-
-
-
-    private static HeadObjectResponse getObjectMetadata(
-            S3SftpPath path,
-            Duration timeout
-    ) throws IOException {
-        logger.info("getObjectMetadata:{}",path.getKey());
-        var client = path.getFileSystem().client();
-        var bucketName = path.bucketName();
-        try {
-            return client.headObject(req -> req
-                    .bucket(bucketName)
-                    .key(path.getKey())
-            ).get(timeout.toMillis(), MILLISECONDS);
-
-        } catch (NoSuchKeyException e){
-            return null;
-        } catch (ExecutionException e) {
-            Throwable cause = e.getCause();
-            if(cause instanceof NoSuchKeyException){
-                return null;
-            }
-            var errMsg = format(
-                    "an '%s' error occurred while obtaining the metadata (for operation getFileAttributes) of '%s'" +
-                            "that was not handled successfully by the S3Client's configured RetryConditions",
-                    e.getCause().toString(), path.toUri());
-            logger.error(errMsg);
-            throw new IOException(errMsg, e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException(e);
-        } catch (TimeoutException e) {
-            throw new IOException("getFileAttributes time out :"+timeout.toMillis(), e);
+            return new S3SftpBasicFileAttributes(
+                    objectHeadResponse.getLastModifiedTime(),
+                    objectHeadResponse.getSize(),
+                    objectHeadResponse.geteTag(),
+                    false,
+                    true,
+                    objectHeadResponse.isEmptyDirectory(),
+                    posixFilePermissions
+            );
         }
     }
 

@@ -59,6 +59,7 @@ public class SfrpServerConfig {
         SftpSubsystemFactory factory = new SftpSubsystemFactory();
         server.setSubsystemFactories(Collections.singletonList(factory));
 
+
         factory.addSftpEventListener(new SftpEventListener() {
             @Override
             public void received(ServerSession session, int type, int id) throws IOException {
