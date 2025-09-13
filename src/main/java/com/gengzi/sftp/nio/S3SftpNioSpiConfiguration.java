@@ -34,7 +34,7 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
     public static final S3ClientNameEnum CLIENT_NAME_DEFAULT_VAL = S3ClientNameEnum.DEFAULT_AWS_S3;
     private static final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
     public static Long TIME_OUT_VAL = 5 * 60L;
-    public static TimeUnit TIME_OUT_UNIT_VAL = TimeUnit.MILLISECONDS;
+    public static TimeUnit TIME_OUT_UNIT_VAL = TimeUnit.SECONDS;
     // 桶
     private String bucketName;
 

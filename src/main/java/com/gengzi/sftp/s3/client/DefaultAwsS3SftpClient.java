@@ -15,7 +15,6 @@ import software.amazon.awssdk.core.BytesWrapper;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.core.async.SdkPublisher;
-import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
@@ -100,22 +99,21 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
     }
 
     private static CompletableFuture<List<String>> listObjectsRecursively(
-            S3AsyncClient client, ListObjectsV2Request request) {
+            S3AsyncClient client, ListObjectsV2Request request, List<String> allFiles) {
 
         return client.listObjectsV2(request)
                 .thenCompose(response -> {
-                    List<String> files = new ArrayList<>();
                     // 处理当前页文件
-                    files.addAll(response.contents().stream().map(S3Object::key).toList());
-                    files.addAll(response.commonPrefixes().stream().map(CommonPrefix::prefix).toList());
+                    allFiles.addAll(response.contents().stream().map(S3Object::key).toList());
+                    allFiles.addAll(response.commonPrefixes().stream().map(CommonPrefix::prefix).toList());
                     // 若有更多结果，继续异步获取下一页
                     if (response.isTruncated()) {
                         ListObjectsV2Request nextRequest = request.toBuilder()
                                 .continuationToken(response.nextContinuationToken())
                                 .build();
-                        return listObjectsRecursively(client, nextRequest);
+                        return listObjectsRecursively(client, nextRequest, allFiles);
                     }
-                    return CompletableFuture.completedFuture(files);
+                    return CompletableFuture.completedFuture(allFiles);
                 });
     }
 
@@ -329,7 +327,8 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                 .maxKeys(1000)
                 .build();
         S3AsyncClient client = this.s3Client;
-        return listObjectsRecursively(client, request);
+        ArrayList<String> allFiles = new ArrayList<>();
+        return listObjectsRecursively(client, request, allFiles);
     }
 
     /**
@@ -411,7 +410,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
             Thread.currentThread().interrupt();
             throw new IOException(e);
         } catch (TimeoutException e) {
-            throw new IOException( "path "+ key +"getFileAttributes timeout " + timeout + ",timeUnit" + timeUnit.toString(), e);
+            throw new IOException("path " + key + "getFileAttributes timeout " + timeout + ",timeUnit" + timeUnit.toString(), e);
         }
     }
 
