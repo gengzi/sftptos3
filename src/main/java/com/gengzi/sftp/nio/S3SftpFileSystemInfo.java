@@ -63,6 +63,7 @@ public class S3SftpFileSystemInfo {
     public String accessKey() {
         return accessKey;
     }
+
     public String accessSecret() {
         return accessSecret;
     }

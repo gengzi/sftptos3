@@ -13,8 +13,15 @@ import java.util.concurrent.CompletableFuture;
 /**
  * s3 对象存储客户端提供者
  */
-public interface S3SftpClient<T> {
+interface S3SftpClient<T> {
 
+
+    /**
+     * s3客户端名称
+     *
+     * @return
+     */
+    String clietName();
 
     /**
      * 创建s3操作客户端

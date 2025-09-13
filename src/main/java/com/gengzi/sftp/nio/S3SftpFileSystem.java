@@ -101,7 +101,7 @@ public class S3SftpFileSystem extends FileSystem {
      */
     @Override
     public Iterable<Path> getRootDirectories() {
-        return Collections.singleton(S3SftpPath.getPath(this, "/"));
+        return Collections.singleton(S3SftpPath.getPath(this, s3SftpNioSpiConfiguration.userRootPath()));
     }
 
     @Override

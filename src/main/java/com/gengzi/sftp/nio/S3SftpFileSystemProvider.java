@@ -1,5 +1,6 @@
 package com.gengzi.sftp.nio;
 
+import com.gengzi.sftp.nio.constans.Constants;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,15 +30,22 @@ import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 
 /**
- * 用于创建返回 FileSystem 的工厂类
- * 负责创建和管理 FileSystem 实例
+ * s3sftp文件系统提供者
+ * 创建和管理文件系统实例（FileSystem）
+ * 将 URI 转换为文件系统路径（Path）
+ * 执行具体的文件操作（创建、删除、复制、移动文件 / 目录等）
+ *
+ *
  */
 public class S3SftpFileSystemProvider extends FileSystemProvider {
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
     // 文件系统前缀标识
     static final String SCHEME = "s3sftp";
-    static final String PATH_SEPARATOR = "/";
+    // 文件分隔符
+    static final String PATH_SEPARATOR = Constants.PATH_SEPARATOR;
+    // 缓存已经创建的S3SftpFileSystem
     private static final Map<String, S3SftpFileSystem> FS_CACHE = new ConcurrentHashMap<>();
-    private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
+
 
     static S3SftpPath checkPath(Path obj) {
         Objects.requireNonNull(obj);
@@ -67,28 +75,37 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
         if (!uri.getScheme().equals(getScheme())) {
             throw new IllegalArgumentException("URI scheme must be " + getScheme());
         }
-        // 解析uri 和 env
-        return getFileSystem(uri);
+        // 解析uri
+        S3SftpFileSystemInfo info = new S3SftpFileSystemInfo(uri);
+        // 解析env
+        S3SftpNioSpiConfiguration config = new S3SftpNioSpiConfiguration(env)
+                .withEndpoint(info.endpoint())
+                .withBucketName(info.bucket());
+        if (info.accessKey() != null) {
+            config.withCredentials(info.accessKey(), info.accessSecret());
+        }
+        S3SftpFileSystem s3SftpFileSystem = new S3SftpFileSystem(this, config);
+        FS_CACHE.put(info.key(), s3SftpFileSystem);
+        return s3SftpFileSystem;
     }
 
     @Override
     public FileSystem getFileSystem(URI uri) {
         S3SftpFileSystemInfo info = new S3SftpFileSystemInfo(uri);
-        return FS_CACHE.computeIfAbsent(info.key(), (key) -> {
-            S3SftpNioSpiConfiguration config = new S3SftpNioSpiConfiguration().withEndpoint(info.endpoint()).withBucketName(info.bucket());
-            if (info.accessKey() != null) {
-                config.withCredentials(info.accessKey(), info.accessSecret());
-            }
-            return new S3SftpFileSystem(this, config);
-        });
+        S3SftpFileSystem s3SftpFileSystem = FS_CACHE.get(info.key());
+        if(s3SftpFileSystem == null){
+            throw new FileSystemNotFoundException(info.key());
+        }
+        return s3SftpFileSystem;
     }
 
+    //TODO 代验证？？
     @NotNull
     @Override
     public Path getPath(@NotNull URI uri) {
         Objects.requireNonNull(uri);
         return getFileSystem(uri)
-                .getPath(uri.getScheme() + ":/" + uri.getPath());
+                .getPath(uri.getScheme() + "://" + uri.getPath());
     }
 
     /**

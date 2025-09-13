@@ -94,6 +94,32 @@ public class S3SftpPosixLikePathRepresentation {
         return Collections.emptyList();
     }
 
+    private static boolean isRootString(String path) {
+        return path.equals(Constants.PATH_SEPARATOR);
+    }
+
+    private static boolean isAbsoluteString(String path) {
+        return !(path == null) &&
+                !path.isEmpty() &&
+                path.charAt(0) == PATH_SEPARATOR_CHAR;
+    }
+
+    private static boolean isDirectoryString(String path) {
+        return path.isEmpty()
+                || hasTrailingSeparatorString(path)
+                || path.equals(".")
+                || path.equals("..")
+                || path.endsWith(PATH_SEPARATOR_CHAR + ".")
+                || path.endsWith(PATH_SEPARATOR_CHAR + "..");
+    }
+
+    private static boolean hasTrailingSeparatorString(String path) {
+        if (path.isEmpty()) {
+            return false;
+        }
+        return path.charAt(path.length() - 1) == PATH_SEPARATOR_CHAR;
+    }
+
     /**
      * Does this path represent the root of the bucket
      *
@@ -103,10 +129,6 @@ public class S3SftpPosixLikePathRepresentation {
         return isRootString(path);
     }
 
-    private static boolean isRootString(String path) {
-        return path.equals(Constants.PATH_SEPARATOR);
-    }
-
     /**
      * Is the path resolvable without any further information (e.g. not relative to some other location).
      *
@@ -114,12 +136,6 @@ public class S3SftpPosixLikePathRepresentation {
      */
     boolean isAbsolute() {
         return isAbsoluteString(path);
-    }
-
-    private static boolean isAbsoluteString(String path) {
-        return !(path == null) &&
-                !path.isEmpty() &&
-                path.charAt(0) == PATH_SEPARATOR_CHAR;
     }
 
     /**
@@ -135,24 +151,8 @@ public class S3SftpPosixLikePathRepresentation {
         return isDirectoryString(path);
     }
 
-    private static boolean isDirectoryString(String path) {
-        return path.isEmpty()
-                || hasTrailingSeparatorString(path)
-                || path.equals(".")
-                || path.equals("..")
-                || path.endsWith(PATH_SEPARATOR_CHAR + ".")
-                || path.endsWith(PATH_SEPARATOR_CHAR + "..");
-    }
-
     boolean hasTrailingSeparator() {
         return hasTrailingSeparatorString(path);
-    }
-
-    private static boolean hasTrailingSeparatorString(String path) {
-        if (path.isEmpty()) {
-            return false;
-        }
-        return path.charAt(path.length() - 1) == PATH_SEPARATOR_CHAR;
     }
 
     char[] chars() {
@@ -196,5 +196,5 @@ public class S3SftpPosixLikePathRepresentation {
     public int hashCode() {
         return Objects.hashCode(path);
     }
-    
+
 }

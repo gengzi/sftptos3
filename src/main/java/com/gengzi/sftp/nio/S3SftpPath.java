@@ -50,9 +50,15 @@ public class S3SftpPath implements Path {
         return pathRepresentation.isAbsolute();
     }
 
+    /**
+     * 获取根目录
+     *
+     *
+     * @return
+     */
     @Override
     public S3SftpPath getRoot() {
-        return getPath(this.fileSystem, PATH_SEPARATOR);
+        return getPath(this.fileSystem, this.fileSystem.configuration().userRootPath());
     }
 
     @Override
@@ -480,9 +486,20 @@ public class S3SftpPath implements Path {
         return pathRepresentation.toString().isEmpty();
     }
 
+
+    /**
+     * 处理path路径
+     * 如果为空，返回用户根目录
+     * 如果不为空，返回用户目录下的文件路径
+     *
+     *
+     * @return
+     */
     public String getKey() {
+
+        String rootStr = getRoot().toString();
         if (isEmpty()) {
-            return "";
+            return rootStr;
         }
         var s = toRealPath(NOFOLLOW_LINKS).toString();
         if (s.startsWith(PATH_SEPARATOR + bucketName())) {
@@ -490,6 +507,13 @@ public class S3SftpPath implements Path {
         }
         while (s.startsWith(PATH_SEPARATOR)) {
             s = s.substring(1);
+        }
+        // 判断如果是 / 就认为是根目录
+        if (s.equals(PATH_SEPARATOR)) {
+            return rootStr;
+        }
+        if (!s.startsWith(rootStr)) {
+            s = rootStr + s;
         }
         return s;
     }

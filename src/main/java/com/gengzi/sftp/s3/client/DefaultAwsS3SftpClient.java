@@ -119,6 +119,16 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
                 });
     }
 
+    /**
+     * s3客户端名称
+     *
+     * @return
+     */
+    @Override
+    public String clietName() {
+        return S3ClientNameEnum.DEFAULT_AWS_S3.name();
+    }
+
     @Override
     public S3AsyncClient createClient() {
         return S3AsyncClient.builder()

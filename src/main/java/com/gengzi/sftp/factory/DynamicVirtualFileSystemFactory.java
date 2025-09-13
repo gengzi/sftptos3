@@ -1,18 +1,16 @@
 package com.gengzi.sftp.factory;
 
 import com.gengzi.sftp.nio.S3SftpFileSystemProvider;
+import com.gengzi.sftp.s3.client.S3ClientNameEnum;
 import org.apache.sshd.common.file.FileSystemFactory;
 import org.apache.sshd.common.session.SessionContext;
 
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
-
 
 public class DynamicVirtualFileSystemFactory implements  FileSystemFactory {
 
@@ -33,6 +31,22 @@ public class DynamicVirtualFileSystemFactory implements  FileSystemFactory {
      */
     @Override
     public FileSystem createFileSystem(SessionContext sessionContext) throws IOException {
+
+
+        String username = sessionContext.getUsername();
+        if(username.equals("admin")){
+            Map<String, Object> env = new HashMap<>();
+            env.put("s3sftp.pathStyleAccess", true); // 路径风格访问（MinIO 通常需要）
+            env.put("s3sftp.userRootPath", "ss.ss/1.xx.gg/");
+            env.put("s3sftp.clientName", S3ClientNameEnum.DEFAULT_AWS_S3);
+            URI s3Urix = URI.create("s3sftp://minioadmin:minioadmin@127.0.0.1:9000/image");
+            S3SftpFileSystemProvider s3FileSystemProvider = new S3SftpFileSystemProvider();
+            FileSystem fileSystem = s3FileSystemProvider.newFileSystem(s3Urix, env);
+            return fileSystem;
+        }
+
+
+
 //        // 配置 S3 连接参数
 
         ;        Map<String, Object> env = new HashMap<>();
