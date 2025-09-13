@@ -186,10 +186,10 @@ public class S3SftpPath implements Path {
         }
 
         for (var element : elements) {
-            if (element.equals(".")) {
+            if (".".equals(element)) {
                 continue;
             }
-            if (element.equals("..")) {
+            if ("..".equals(element)) {
                 if (!realElements.isEmpty()) {
                     realElements.removeLast();
                 }

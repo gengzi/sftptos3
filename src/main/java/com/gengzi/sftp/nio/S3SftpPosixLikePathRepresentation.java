@@ -107,8 +107,8 @@ public class S3SftpPosixLikePathRepresentation {
     private static boolean isDirectoryString(String path) {
         return path.isEmpty()
                 || hasTrailingSeparatorString(path)
-                || path.equals(".")
-                || path.equals("..")
+                || ".".equals(path)
+                || "..".equals(path)
                 || path.endsWith(PATH_SEPARATOR_CHAR + ".")
                 || path.endsWith(PATH_SEPARATOR_CHAR + "..");
     }

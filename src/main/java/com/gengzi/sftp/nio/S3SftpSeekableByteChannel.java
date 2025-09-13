@@ -329,4 +329,15 @@ public class S3SftpSeekableByteChannel implements SeekableByteChannel {
             this.close = true;
         }
     }
+
+
+    @Override
+    public boolean equals(Object obj) {
+        return super.equals(obj);
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode();
+    }
 }

@@ -20,9 +20,7 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
-import software.amazon.awssdk.transfer.s3.model.CopyRequest;
-import software.amazon.awssdk.transfer.s3.model.DownloadFileRequest;
-import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
+import software.amazon.awssdk.transfer.s3.model.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -49,8 +47,8 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
     private static boolean isDirectoryString(String path) {
         return path.isEmpty()
                 || hasTrailingSeparatorString(path)
-                || path.equals(".")
-                || path.equals("..")
+                || ".".equals(path)
+                || "..".equals(path)
                 || path.endsWith(PATH_SEPARATOR_CHAR + ".")
                 || path.endsWith(PATH_SEPARATOR_CHAR + "..");
     }
@@ -64,7 +62,8 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
 
     private static String normalizePath(String path) {
         if (path == null || path.isEmpty()) {
-            return ""; // 空路径表示根目录
+            // 空路径表示根目录
+            return "";
         }
         return path.endsWith("/") ? path : path + "/";
     }
@@ -242,10 +241,10 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
      * @return
      */
     @Override
-    public CompletableFuture<?> getObjectAndWriteToLocalFile(String bucketName, String key, Path destination) {
+    public void getObjectAndWriteToLocalFile(String bucketName, String key, Path destination) throws IOException {
         logger.info("getObjectAndWriteToLocalFile bucketName:{},key:{},Path:{} ", bucketName, key, destination);
         try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(this.s3Client).build()) {
-            return s3TransferManager.downloadFile(
+            CompletableFuture<CompletedFileDownload> downloadCompletableFuture = s3TransferManager.downloadFile(
                     DownloadFileRequest.builder()
                             .getObjectRequest(GetObjectRequest.builder()
                                     .bucket(bucketName)
@@ -254,6 +253,21 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                             .destination(destination)
                             .build()
             ).completionFuture();
+
+            if (false) {
+                try {
+                    downloadCompletableFuture.get(600L, TimeUnit.MILLISECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException("Could not open the path:" + key, e);
+                } catch (TimeoutException | ExecutionException e) {
+                    throw new IOException("Could not open the path:" + key, e);
+                }
+            } else {
+                downloadCompletableFuture.join();
+            }
+
+
         }
     }
 
@@ -266,10 +280,10 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
      * @return
      */
     @Override
-    public CompletableFuture<?> putObjectByLocalFile(String bucketName, String key, Path localFile) {
+    public void putObjectByLocalFile(String bucketName, String key, Path localFile) throws IOException {
         logger.info("putObjectByLocalFile bucketName:{},key:{},Path:{} ", bucketName, key, localFile);
         try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(this.s3Client).build()) {
-            return s3TransferManager.uploadFile(
+            CompletableFuture<CompletedFileUpload> uploadCompletableFuture = s3TransferManager.uploadFile(
                     UploadFileRequest.builder()
                             .putObjectRequest(PutObjectRequest.builder()
                                     .bucket(bucketName)
@@ -279,8 +293,22 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                             .source(localFile)
                             .build()
             ).completionFuture();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+
+            // TODO: 上传文件超时配置新增
+            if (false) {
+                // 在超时时间内等待获取结果
+                uploadCompletableFuture.get(600L, TimeUnit.MILLISECONDS);
+            } else {
+                // 会阻塞当前线程，直到异步任务执行完成
+                uploadCompletableFuture.join();
+            }
+        } catch (InterruptedException e) {
+            // 如果是中断异常，表示有其他线程调用了该线程的 interrupt 方法，会把中断标志改为false，清除中断标志位信息。
+            // 调用此方法，重新设置中断标志位为 true
+            Thread.currentThread().interrupt();
+            throw new IOException("Could not write to path:" + key, e);
+        } catch (TimeoutException | ExecutionException | IOException e) {
+            throw new IOException("Could not write to path:" + key, e);
         }
     }
 

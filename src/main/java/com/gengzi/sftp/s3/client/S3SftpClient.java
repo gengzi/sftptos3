@@ -83,7 +83,7 @@ public interface S3SftpClient<T> {
      * @param destination
      * @return
      */
-    CompletableFuture<?> getObjectAndWriteToLocalFile(String bucketName, String key, Path destination);
+    void getObjectAndWriteToLocalFile(String bucketName, String key, Path destination) throws IOException;
 
 
     /**
@@ -94,7 +94,7 @@ public interface S3SftpClient<T> {
      * @param localFile
      * @return
      */
-    CompletableFuture<?> putObjectByLocalFile(String bucketName, String key, Path localFile);
+    void putObjectByLocalFile(String bucketName, String key, Path localFile) throws IOException;
 
 
     /**

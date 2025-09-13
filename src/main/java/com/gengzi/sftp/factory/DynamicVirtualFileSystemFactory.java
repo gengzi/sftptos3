@@ -34,9 +34,10 @@ public class DynamicVirtualFileSystemFactory implements  FileSystemFactory {
 
 
         String username = sessionContext.getUsername();
-        if(username.equals("admin")){
+        if("admin".equals(username)){
             Map<String, Object> env = new HashMap<>();
-            env.put("s3sftp.pathStyleAccess", true); // 路径风格访问（MinIO 通常需要）
+            // 路径风格访问（MinIO 通常需要）
+            env.put("s3sftp.pathStyleAccess", true);
             env.put("s3sftp.userRootPath", "ss.ss/1.xx.gg/");
             env.put("s3sftp.clientName", S3ClientNameEnum.DEFAULT_AWS_S3);
             URI s3Urix = URI.create("s3sftp://minioadmin:minioadmin@127.0.0.1:9000/image");
@@ -56,7 +57,8 @@ public class DynamicVirtualFileSystemFactory implements  FileSystemFactory {
 //        // 区域（如 AWS 中国区为 "cn-north-1"，MinIO 可省略）
 //        env.put("aws.region", "us-east-1");
 //        // 对接非 AWS 服务（如 MinIO、阿里云 OSS）时需指定端点
-//        env.put("s3.endpointOverride", "http://localhost:9000"); // MinIO 本地示例
+        // MinIO 本地示例
+//        env.put("s3.endpointOverride", "http://localhost:9000");
         env.put("s3.pathStyleAccess", true); // 路径风格访问（MinIO 通常需要）
 //        FileSystem s3Fs = FileSystems.newFileSystem(
 //                URI.create("s3://my-bucket"), // 桶名直接包含在 URI 中
