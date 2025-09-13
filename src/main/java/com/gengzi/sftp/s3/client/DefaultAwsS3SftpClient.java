@@ -37,7 +37,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
+public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> {
 
     private static final char PATH_SEPARATOR_CHAR = Constants.PATH_SEPARATOR.charAt(0);
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -160,7 +160,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
         long readTo = offset + length - 1;
         String range = "bytes=" + readFrom + "-" + readTo;
         logger.debug("byte range for {} is '{}'", key, range);
-        try (S3AsyncClient s3AsyncClient = createClient(configuration)) {
+        try (S3AsyncClient s3AsyncClient = this.s3Client) {
             return s3AsyncClient.getObject(
                             builder -> builder
                                     .bucket(bucketName)
@@ -182,7 +182,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
     @Override
     public CompletableFuture putObjectToCreateDirectory(String bucketName, String directoryKey) {
         logger.debug("getObject bucketName:{},directoryKey:{}", bucketName, directoryKey);
-        return createClient(configuration).putObject(
+        return this.s3Client.putObject(
                 PutObjectRequest.builder()
                         .bucket(bucketName)
                         .key(directoryKey)
@@ -201,7 +201,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
     @Override
     public CompletableFuture<?> deleteObject(String bucketName, String deletePathKey) {
         logger.debug("deleteObject bucketName:{},deletePathKey:{}", bucketName, deletePathKey);
-        return createClient(configuration).deleteObject(
+        return this.s3Client.deleteObject(
                 DeleteObjectRequest.builder()
                         .bucket(bucketName)
                         .key(deletePathKey)
@@ -220,7 +220,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
      */
     @Override
     public CompletableFuture<?> copyObject(String sourceBucketName, String sourceKey, String destinationBucketName, String destinationKey) {
-        try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(createClient(configuration)).build()) {
+        try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(this.s3Client).build()) {
             return s3TransferManager.copy(CopyRequest.builder()
                     .copyObjectRequest(CopyObjectRequest.builder()
                             .checksumAlgorithm(ChecksumAlgorithm.SHA256)
@@ -244,7 +244,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
     @Override
     public CompletableFuture<?> getObjectAndWriteToLocalFile(String bucketName, String key, Path destination) {
         logger.info("getObjectAndWriteToLocalFile bucketName:{},key:{},Path:{} ", bucketName, key, destination);
-        try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(createClient(configuration)).build()) {
+        try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(this.s3Client).build()) {
             return s3TransferManager.downloadFile(
                     DownloadFileRequest.builder()
                             .getObjectRequest(GetObjectRequest.builder()
@@ -268,7 +268,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
     @Override
     public CompletableFuture<?> putObjectByLocalFile(String bucketName, String key, Path localFile) {
         logger.info("putObjectByLocalFile bucketName:{},key:{},Path:{} ", bucketName, key, localFile);
-        try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(createClient(configuration)).build()) {
+        try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(this.s3Client).build()) {
             return s3TransferManager.uploadFile(
                     UploadFileRequest.builder()
                             .putObjectRequest(PutObjectRequest.builder()
@@ -300,14 +300,8 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
                 .delimiter("/")
                 .maxKeys(1000)
                 .build();
-        S3AsyncClient client = createClient(configuration);
-        return listObjectsRecursively(client, request)
-                .whenComplete((v, ex) -> {
-                    if (ex != null) {
-                        throw new RuntimeException(ex);
-                    }
-                    client.close();
-                });
+        S3AsyncClient client = this.s3Client;
+        return listObjectsRecursively(client, request);
     }
 
     /**
@@ -370,7 +364,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
         Long timeout = this.configuration.timeout();
         TimeUnit timeUnit = this.configuration.timeoutUnit();
         try {
-            return createClient(configuration).headObject(req -> req
+            return this.s3Client.headObject(req -> req
                     .bucket(bucketName)
                     .key(key)
             ).get(timeout, timeUnit);
@@ -395,7 +389,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient {
 
     private ListObjectsV2Publisher getObjectsAttributes(String bucketName, String key) {
         String keyDir = normalizePath(key);
-        return createClient(configuration).listObjectsV2Paginator(req -> req
+        return this.s3Client.listObjectsV2Paginator(req -> req
                 .bucket(bucketName)
                 .prefix(keyDir)
                 .delimiter(Constants.PATH_SEPARATOR));
