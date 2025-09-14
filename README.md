@@ -94,3 +94,12 @@ new SftpException(SftpConstants.SSH_FX_FILE_IS_A_DIRECTORY, p.toString() + " is 
 ### 性能监控 arthas
 java -jar E:\ruanjian\arthas\arthas-boot.jar
 
+
+### 性能优化
+需要增加缓存，避免经常访问s3存储，大量请求会拖慢
+针对频繁请求的流程，和即时性不强的数据
+
+优化删除逻辑，只允许删除文件，不允许删除目录
+
+trace:
+

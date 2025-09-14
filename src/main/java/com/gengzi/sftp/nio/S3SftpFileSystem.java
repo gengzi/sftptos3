@@ -55,7 +55,7 @@ public class S3SftpFileSystem extends FileSystem {
         return this.s3Client;
     }
 
-    S3SftpNioSpiConfiguration configuration(){
+    public S3SftpNioSpiConfiguration configuration(){
         return s3SftpNioSpiConfiguration;
     }
 

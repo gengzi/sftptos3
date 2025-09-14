@@ -1,5 +1,6 @@
 package com.gengzi.sftp.nio;
 
+import com.gengzi.sftp.cache.UserPathFileAttributesCacheUtil;
 import com.gengzi.sftp.nio.constans.Constants;
 import com.gengzi.sftp.s3.client.S3SftpClient;
 import com.gengzi.sftp.s3.client.entity.ObjectHeadResponse;
@@ -216,6 +217,7 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
         S3SftpNioSpiConfiguration configuration = deletePath.getFileSystem().configuration();
         Long timeout = configuration.timeout();
         TimeUnit timeoutUnit = configuration.timeoutUnit();
+
         if (!directory) {
             // 是文件，可以删除
             delPath(s3Client, bucketName, deletePathKey, timeout, timeoutUnit);
@@ -229,6 +231,8 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
                 throw new DirectoryNotEmptyException("dir is not empty");
             }
         }
+        // 移除缓存
+        UserPathFileAttributesCacheUtil.removeCacheValue(deletePath.toRealPath(LinkOption.NOFOLLOW_LINKS));
     }
 
     /**
@@ -341,6 +345,7 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
 
     /**
      * 检查当前程序对指定路径（文件 / 目录）是否拥有特定的访问权限，若权限不足则直接抛出异常，无异常则表示权限满足。
+     * 对象存储通常不包含这些信息，文件或者目录是否可读可写可执行所以忽略访问权限检查，只检查对象是否存在
      *
      * @param path  the path to the file to check
      * @param modes The access modes to check; may have zero elements
@@ -351,9 +356,7 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
         S3SftpPath checkPath = checkPath(path);
         S3SftpPath realPath = checkPath.toRealPath(LinkOption.NOFOLLOW_LINKS);
         try {
-
-            S3SftpBasicFileAttributes.get((S3SftpPath) realPath, null);
-
+            S3SftpBasicFileAttributes.get(realPath, null);
         } catch (NoSuchFileException e) {
             throw new NoSuchFileException(realPath.toString());
         } catch (IOException e) {

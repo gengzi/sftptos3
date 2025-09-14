@@ -2,6 +2,7 @@ package com.gengzi.sftp.nio;
 
 import com.gengzi.sftp.nio.constans.Constants;
 import com.gengzi.sftp.s3.client.S3ClientNameEnum;
+import org.apache.sshd.common.session.SessionContext;
 import software.amazon.awssdk.services.s3.internal.BucketUtils;
 
 import java.net.URI;
@@ -32,7 +33,10 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
     // 默认客户端实现
     public static final String CLIENT_NAME = "s3sftp.clientName";
     public static final S3ClientNameEnum CLIENT_NAME_DEFAULT_VAL = S3ClientNameEnum.DEFAULT_AWS_S3;
+    // sessionContext
+    public static final String SESSION_CONTEXT = "s3sftp.sessionContext";
     private static final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
+    private static final String USER_PATH_FILE_ATTRIBUTES_CACHE_KEY_PREFIX = "s3sftp.attribute.k";
     public static Long TIME_OUT_VAL = 5 * 60L;
     public static TimeUnit TIME_OUT_UNIT_VAL = TimeUnit.SECONDS;
     // 桶
@@ -122,5 +126,23 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
 
     public String userRootPath() {
         return get(USER_ROOT_PATH).toString();
+    }
+
+    public SessionContext sessionContext() {
+        return (SessionContext) get(SESSION_CONTEXT);
+    }
+
+
+    /**
+     * 返回UserPathFileAttributesCacheKey
+     * 拼装规则
+     * username:endpoint/bucketName/pathkey
+     *
+     * @return
+     */
+    public String getUserPathFileAttributesCacheKey(String pathKey) {
+        String username = sessionContext().getUsername();
+        String cacheKeyPrefixFormat = USER_PATH_FILE_ATTRIBUTES_CACHE_KEY_PREFIX + "%s:%s/%s/%s";
+        return String.format(cacheKeyPrefixFormat, username, getEndpoint(), bucketName, pathKey);
     }
 }

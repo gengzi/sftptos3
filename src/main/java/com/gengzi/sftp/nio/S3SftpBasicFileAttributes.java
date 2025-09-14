@@ -1,8 +1,10 @@
 package com.gengzi.sftp.nio;
 
 
+import com.gengzi.sftp.cache.UserPathFileAttributesCacheUtil;
 import com.gengzi.sftp.s3.client.S3SftpClient;
 import com.gengzi.sftp.s3.client.entity.ObjectHeadResponse;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,12 +14,17 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermission;
 import java.time.Duration;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 public class S3SftpBasicFileAttributes implements BasicFileAttributes {
 
     private static final Logger logger = LoggerFactory.getLogger(S3SftpBasicFileAttributes.class.getName());
     // 修改声明：为目录和文件都添加了权限，支持用户用户组，和其他用户组的可读可写
     private static final Set<PosixFilePermission> posixFilePermissions;
+
     static {
         posixFilePermissions = new HashSet<>();
         posixFilePermissions.add(PosixFilePermission.OWNER_READ);
@@ -36,8 +43,6 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
             false,
             posixFilePermissions
     );
-
-
 
     private final FileTime lastModifiedTime;
     private final Long size;
@@ -68,14 +73,24 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
     }
 
     public static S3SftpBasicFileAttributes get(S3SftpPath path, Duration duration) throws IOException {
+        String key = path.getKey();
+        ObjectHeadResponse cacheValue = UserPathFileAttributesCacheUtil.getCacheValue(path);
+        if (cacheValue != null) {
+            return getS3SftpBasicFileAttributes(cacheValue);
+        } else {
+            S3SftpClient client = path.getFileSystem().client();
+            ObjectHeadResponse objectHeadResponse = client.headFileOrDirObject(path.bucketName(), key);
+            UserPathFileAttributesCacheUtil.putCacheValue(path, objectHeadResponse);
+            return getS3SftpBasicFileAttributes(objectHeadResponse);
+        }
+    }
 
-
-        S3SftpClient client = path.getFileSystem().client();
-        ObjectHeadResponse objectHeadResponse = client.headFileOrDirObject(path.bucketName(), path.getKey());
-        if(objectHeadResponse.isDirectory()){
+    @NotNull
+    private static S3SftpBasicFileAttributes getS3SftpBasicFileAttributes(ObjectHeadResponse objectHeadResponse) {
+        if (objectHeadResponse.isDirectory()) {
             DIRECTORY_ATTRIBUTES.isEmptyDirectory = objectHeadResponse.isEmptyDirectory();
             return DIRECTORY_ATTRIBUTES;
-        }else{
+        } else {
             return new S3SftpBasicFileAttributes(
                     objectHeadResponse.getLastModifiedTime(),
                     objectHeadResponse.getSize(),

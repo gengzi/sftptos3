@@ -40,6 +40,7 @@ public class DynamicVirtualFileSystemFactory implements  FileSystemFactory {
             env.put("s3sftp.pathStyleAccess", true);
             env.put("s3sftp.userRootPath", "ss.ss/1.xx.gg/");
             env.put("s3sftp.clientName", S3ClientNameEnum.DEFAULT_AWS_S3);
+            env.put("s3sftp.sessionContext", sessionContext);
             URI s3Urix = URI.create("s3sftp://minioadmin:minioadmin@127.0.0.1:9000/image");
             S3SftpFileSystemProvider s3FileSystemProvider = new S3SftpFileSystemProvider();
             FileSystem fileSystem = s3FileSystemProvider.newFileSystem(s3Urix, env);
