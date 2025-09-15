@@ -1,13 +1,8 @@
 package com.gengzi.sftp.nio;
 
-import com.gengzi.sftp.nio.constans.Constants;
-import io.reactivex.rxjava3.core.Flowable;
-import org.reactivestreams.Publisher;
+import com.gengzi.sftp.cache.DirectoryContentsNamesCacheUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.services.s3.model.CommonPrefix;
-import software.amazon.awssdk.services.s3.model.S3Object;
-import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -33,35 +28,44 @@ public class S3SftpDirectoryStream implements DirectoryStream {
     private Iterator<Path> dirs;
 
 
-    public S3SftpDirectoryStream(S3SftpFileSystem fileSystem, String bucketName, String path, DirectoryStream.Filter<? super Path> filter)  {
+    public S3SftpDirectoryStream(S3SftpFileSystem fileSystem, String bucketName, String path, DirectoryStream.Filter<? super Path> filter) {
         this.path = path;
         this.bucketName = bucketName;
         this.fileSystem = fileSystem;
         this.filter = filter;
 
-        CompletableFuture<List<String>> currentKeyDirAllFileNames = fileSystem.client().getCurrentKeyDirAllFileNames(bucketName, path);
-        try {
-            List<String> fileNames = currentKeyDirAllFileNames.get(fileSystem.configuration().timeout(), fileSystem.configuration().timeoutUnit());
-            dirs = fileNames.stream()
-                    .map(fileName -> fileSystem.getPath(fileName))
-                    .filter(s3Sftppath -> !isEqualToParent(path, s3Sftppath))
-                    .filter(s3Sftppath -> tryAccept(filter, s3Sftppath))
-                    .iterator();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        } catch (ExecutionException e) {
-            throw new RuntimeException(e);
-        } catch (TimeoutException e) {
-            logger.error("getCurrentKeyDirAllFileNames time out");
-            throw new RuntimeException(e);
+        List<String> cacheValue = DirectoryContentsNamesCacheUtil.getCacheValue(fileSystem, path);
+        if (cacheValue != null) {
+            filterFileNams(fileSystem, path, filter, cacheValue);
+        } else {
+            CompletableFuture<List<String>> currentKeyDirAllFileNames = fileSystem.client().getCurrentKeyDirAllFileNames(bucketName, path);
+            try {
+                List<String> fileNames = currentKeyDirAllFileNames.get(fileSystem.configuration().timeout(), fileSystem.configuration().timeoutUnit());
+                filterFileNams(fileSystem, path, filter, fileNames);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            } catch (TimeoutException e) {
+                logger.error("getCurrentKeyDirAllFileNames time out");
+                throw new RuntimeException(e);
+            }
         }
+
     }
 
     private static boolean isEqualToParent(String finalDirName, Path p) {
         return ((S3SftpPath) p).getKey().equals(finalDirName);
     }
 
+    private void filterFileNams(S3SftpFileSystem fileSystem, String path, Filter<? super Path> filter, List<String> fileNames) {
+        dirs = fileNames.stream()
+                .map(fileName -> fileSystem.getPath(fileName))
+                .filter(s3Sftppath -> !isEqualToParent(path, s3Sftppath))
+                .filter(s3Sftppath -> tryAccept(filter, s3Sftppath))
+                .iterator();
+    }
 
     private boolean tryAccept(DirectoryStream.Filter<? super Path> filter, Path path) {
         try {

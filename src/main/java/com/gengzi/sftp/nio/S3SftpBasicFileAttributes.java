@@ -1,6 +1,7 @@
 package com.gengzi.sftp.nio;
 
 
+import com.gengzi.sftp.cache.DirectoryContentsNamesCacheUtil;
 import com.gengzi.sftp.cache.UserPathFileAttributesCacheUtil;
 import com.gengzi.sftp.s3.client.S3SftpClient;
 import com.gengzi.sftp.s3.client.entity.ObjectHeadResponse;
@@ -14,17 +15,13 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermission;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class S3SftpBasicFileAttributes implements BasicFileAttributes {
 
     private static final Logger logger = LoggerFactory.getLogger(S3SftpBasicFileAttributes.class.getName());
     // 修改声明：为目录和文件都添加了权限，支持用户用户组，和其他用户组的可读可写
     private static final Set<PosixFilePermission> posixFilePermissions;
-
     static {
         posixFilePermissions = new HashSet<>();
         posixFilePermissions.add(PosixFilePermission.OWNER_READ);
@@ -80,9 +77,21 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
         } else {
             S3SftpClient client = path.getFileSystem().client();
             ObjectHeadResponse objectHeadResponse = client.headFileOrDirObject(path.bucketName(), key);
-            UserPathFileAttributesCacheUtil.putCacheValue(path, objectHeadResponse);
+            putChache(path, objectHeadResponse);
             return getS3SftpBasicFileAttributes(objectHeadResponse);
         }
+    }
+
+    private static void putChache(S3SftpPath path, ObjectHeadResponse objectHeadResponse) {
+        if (objectHeadResponse != null && objectHeadResponse.isDirectory() && objectHeadResponse.getDirectoryContentsNames() != null) {
+            if (objectHeadResponse.isEmptyDirectory()) {
+                DirectoryContentsNamesCacheUtil.putCacheValue(path.getFileSystem(), path.getKey(), new ArrayList<String>());
+            } else {
+                DirectoryContentsNamesCacheUtil.putCacheValue(path.getFileSystem(), path.getKey(), objectHeadResponse.getDirectoryContentsNames());
+            }
+        }
+        //TODO 可以把目录这部分删除掉
+        UserPathFileAttributesCacheUtil.putCacheValue(path, objectHeadResponse);
     }
 
     @NotNull

@@ -9,6 +9,7 @@ import io.reactivex.rxjava3.core.Single;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Flux;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.BytesWrapper;
@@ -74,6 +75,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
         Single<Boolean> empty = Flowable.concat(commonPrefixSdkPublisher, contents).isEmpty();
         if (!empty.blockingGet()) {
             boolean isEmptyDirectory = false;
+            List<String> directoryNames = null;
             Flowable<CommonPrefix> commonPrefixFlowable = Flowable.fromPublisher(commonPrefixSdkPublisher);
             Flowable<S3Object> contentsFlowable = Flowable.fromPublisher(contents);
             // 判断是否为空目录
@@ -84,6 +86,10 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                 if (objectKey.equals(key)) {
                     isEmptyDirectory = true;
                 }
+            }else{
+                Flux<String> prefixMap = Flux.from(commonPrefixFlowable).map(commonPrefix -> commonPrefix.prefix());
+                Flux<String> keyMap = Flux.from(contents).map(s3Object -> s3Object.key());
+                directoryNames = Flux.concat(prefixMap, keyMap).collectList().block();
             }
             return new ObjectHeadResponse(
                     FileTime.fromMillis(0),
@@ -91,7 +97,8 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                     null,
                     true,
                     false,
-                    isEmptyDirectory
+                    isEmptyDirectory,
+                    directoryNames
             );
         } else {
             throw new NoSuchFileException("no such file,path:" + key);
@@ -357,7 +364,8 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                 response.eTag(),
                 false,
                 true,
-                false
+                false,
+                null
         );
 
     }
@@ -382,7 +390,8 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                 response.eTag(),
                 false,
                 true,
-                false
+                false,
+                null
         );
     }
 

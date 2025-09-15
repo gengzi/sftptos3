@@ -1,5 +1,6 @@
 package com.gengzi.sftp.nio;
 
+import com.gengzi.sftp.cache.DirectoryContentsNamesCacheUtil;
 import com.gengzi.sftp.cache.UserPathFileAttributesCacheUtil;
 import com.gengzi.sftp.nio.constans.Constants;
 import com.gengzi.sftp.s3.client.S3SftpClient;
@@ -177,7 +178,6 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
         S3SftpPath s3Directory = checkPath(dir);
-        // 判断路径是否存在
         if (s3Directory.toString().equals(PATH_SEPARATOR) || s3Directory.toString().isEmpty()) {
             throw new FileAlreadyExistsException("Root directory already exists");
         }
@@ -185,6 +185,8 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
         if (!directoryKey.endsWith(PATH_SEPARATOR) && !directoryKey.isEmpty()) {
             directoryKey = directoryKey + PATH_SEPARATOR;
         }
+        // 移除缓存，移除父目录缓存
+        DirectoryContentsNamesCacheUtil.removeCacheValue(s3Directory.getFileSystem(), directoryKey);
         try {
             S3SftpFileSystem fileSystem = s3Directory.getFileSystem();
             fileSystem.client().putObjectToCreateDirectory(s3Directory.bucketName(), directoryKey)
@@ -198,6 +200,7 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
             throw new RuntimeException(e);
         }
     }
+
 
     /**
      * 用于删除指定路径对应的文件或目录，是文件系统操作中删除资源的核心方法
@@ -233,6 +236,7 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
         }
         // 移除缓存
         UserPathFileAttributesCacheUtil.removeCacheValue(deletePath.toRealPath(LinkOption.NOFOLLOW_LINKS));
+        DirectoryContentsNamesCacheUtil.removeCacheValue(deletePath.getFileSystem(), deletePathKey);
     }
 
     /**
@@ -252,6 +256,8 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
 
         var s3SourcePath = checkPath(source);
         var s3TargetPath = checkPath(target);
+        // 移除缓存
+        DirectoryContentsNamesCacheUtil.removeCacheValue(s3TargetPath.getFileSystem(), s3TargetPath.getKey());
 
         final var s3Client = s3SourcePath.getFileSystem().client();
         final var sourceBucket = s3SourcePath.bucketName();

@@ -61,7 +61,7 @@ public class UserPathFileAttributesCacheUtil {
     public static String getCacheStats() {
         CacheStats stats = cacheManager.getUserPathFileAttributesCache().stats();
         return String.format(
-                "缓存统计 - 命中率: %.2f%%, 加载次数: %d, 命中次数: %d, 未命中次数: %d",
+                "UserPathFileAttributesCache 缓存统计 - 命中率: %.2f%%, 加载次数: %d, 命中次数: %d, 未命中次数: %d",
                 stats.hitRate() * 100,
                 stats.loadCount(),
                 stats.hitCount(),

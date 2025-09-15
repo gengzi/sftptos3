@@ -1,5 +1,6 @@
 package com.gengzi.sftp.nio;
 
+import com.gengzi.sftp.cache.DirectoryContentsNamesCacheUtil;
 import com.gengzi.sftp.cache.UserPathFileAttributesCacheUtil;
 import com.gengzi.sftp.s3.client.S3SftpClient;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -159,6 +160,7 @@ public class S3SftpWritableByteChannel implements WritableByteChannel {
         }
         // 移除缓存
         UserPathFileAttributesCacheUtil.removeCacheValue(s3SftpPath);
+        DirectoryContentsNamesCacheUtil.removeCacheValue(s3SftpPath.getFileSystem(),s3SftpPath.getKey());
         // 上传文件到对象存储
         s3SftpClient.putObjectByLocalFile(s3SftpPath.bucketName(), s3SftpPath.getKey(), tempFile);
         // 删除临时文件

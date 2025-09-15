@@ -22,7 +22,21 @@ public class CaffeineCacheConfig {
      *
      * @return
      */
-    public static Cache<String, Object> getUserPathCache() {
+    public static Cache<String, Object> getUserPathFileAttributesCache() {
+        return Caffeine.newBuilder()
+                .maximumSize(DEFAULT_CACHE_SIZE)
+                .expireAfterWrite(EXPIRE_AFTER_WRITE_TIMEOUT, EXPIRE_AFTER_WRITE_TIME_UNIT)
+                .recordStats()  // 开启统计
+                .build();
+    }
+
+    /**
+     * 当前目录文件列表缓存
+     * 过期时间为 5 秒
+     *
+     * @return
+     */
+    public static Cache<String, Object> getDirectoryContentsNamesCache() {
         return Caffeine.newBuilder()
                 .maximumSize(DEFAULT_CACHE_SIZE)
                 .expireAfterWrite(EXPIRE_AFTER_WRITE_TIMEOUT, EXPIRE_AFTER_WRITE_TIME_UNIT)

@@ -36,7 +36,8 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
     // sessionContext
     public static final String SESSION_CONTEXT = "s3sftp.sessionContext";
     private static final Pattern ENDPOINT_REGEXP = Pattern.compile("(\\w[\\w\\-\\.]*)?(:(\\d+))?");
-    private static final String USER_PATH_FILE_ATTRIBUTES_CACHE_KEY_PREFIX = "s3sftp.attribute.k";
+    private static final String USER_PATH_FILE_ATTRIBUTES_CACHE_KEY_PREFIX = "s3sftp.attribute.k.";
+    private static final String DIRECTORY_CONTENTS_NAMES_CACHE_KEY_PREFIX = "s3sftp.directory.k.";
     public static Long TIME_OUT_VAL = 5 * 60L;
     public static TimeUnit TIME_OUT_UNIT_VAL = TimeUnit.SECONDS;
     // 桶
@@ -143,6 +144,13 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
     public String getUserPathFileAttributesCacheKey(String pathKey) {
         String username = sessionContext().getUsername();
         String cacheKeyPrefixFormat = USER_PATH_FILE_ATTRIBUTES_CACHE_KEY_PREFIX + "%s:%s/%s/%s";
+        return String.format(cacheKeyPrefixFormat, username, getEndpoint(), bucketName, pathKey);
+    }
+
+
+    public String getDirectoryContentsNamesCacheKey(String pathKey) {
+        String username = sessionContext().getUsername();
+        String cacheKeyPrefixFormat = DIRECTORY_CONTENTS_NAMES_CACHE_KEY_PREFIX + "%s:%s/%s/%s";
         return String.format(cacheKeyPrefixFormat, username, getEndpoint(), bucketName, pathKey);
     }
 }
