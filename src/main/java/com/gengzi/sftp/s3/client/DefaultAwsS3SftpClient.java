@@ -86,7 +86,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                 if (objectKey.equals(key)) {
                     isEmptyDirectory = true;
                 }
-            }else{
+            } else {
                 Flux<String> prefixMap = Flux.from(commonPrefixFlowable).map(commonPrefix -> commonPrefix.prefix());
                 Flux<String> keyMap = Flux.from(contents).map(s3Object -> s3Object.key());
                 directoryNames = Flux.concat(prefixMap, keyMap).collectList().block();
@@ -136,15 +136,23 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
 
     @Override
     public S3AsyncClient createClient(S3SftpNioSpiConfiguration s3SftpNioSpiConfiguration) {
+//        ProxyConfiguration proxyConfig = ProxyConfiguration.builder()
+//                .host("127.0.0.1")    // 代理主机（Fiddler默认本地）
+//                .port(8888)           // 代理端口（Fiddler默认8888）
+//                .build();
 
         return S3AsyncClient.builder()
+
                 .endpointOverride(s3SftpNioSpiConfiguration.endpointUri())
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(s3SftpNioSpiConfiguration.accessKey(), s3SftpNioSpiConfiguration.secretKey())
                 ))
                 .serviceConfiguration(service -> service
                         .pathStyleAccessEnabled(true)
-                )
+                )// 关键：配置HTTP客户端的代理
+//                .httpClientBuilder(NettyNioAsyncHttpClient.builder()
+//                        .proxyConfiguration(proxyConfig)
+//                )
                 .build();
     }
 
@@ -164,15 +172,15 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
         long readTo = offset + length - 1;
         String range = "bytes=" + readFrom + "-" + readTo;
         logger.debug("byte range for {} is '{}'", key, range);
-        try (S3AsyncClient s3AsyncClient = this.s3Client) {
-            return s3AsyncClient.getObject(
-                            builder -> builder
-                                    .bucket(bucketName)
-                                    .key(key)
-                                    .range(range),
-                            AsyncResponseTransformer.toBytes())
-                    .thenApply(BytesWrapper::asByteBuffer);
-        }
+        S3AsyncClient s3AsyncClient = this.s3Client;
+        return s3AsyncClient.getObject(
+                        builder -> builder
+                                .bucket(bucketName)
+                                .key(key)
+                                .range(range),
+                        AsyncResponseTransformer.toBytes())
+                .thenApply(BytesWrapper::asByteBuffer);
+
 
     }
 

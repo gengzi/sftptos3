@@ -441,6 +441,7 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
      * @param s3SftpPath 文件
      */
     public Boolean exists(S3SftpClient s3Client, S3SftpPath s3SftpPath) {
+        // TODO 增加缓存，耗时操作  ？？？
         try {
             ObjectHeadResponse objectHeadResponse = s3Client.headObject(s3SftpPath.bucketName(), s3SftpPath.getKey());
             if (objectHeadResponse == null) {

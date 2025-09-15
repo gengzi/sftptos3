@@ -26,6 +26,9 @@ public interface S3SftpClient<T> {
 
     /**
      * 创建s3操作客户端
+     * 本身s3client 应该是单例的，长期存活在程序中使用， 此方法只在实现接口是覆盖并调用引用到全局变量中，在使用s3client不要重复调用此方法，避免多次创建s3client对象
+     * 并且不要在其他执行s3操作的方法中，将其close将其关闭，因为是异步执行，提前关闭会导致异常
+     *
      * @param s3SftpNioSpiConfiguration s3相关配置
      *
      * @return T
