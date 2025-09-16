@@ -15,7 +15,7 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.apache.sshd:sshd-sftp:2.10.0'
+    implementation 'org.apache.sshd:sshd-sftp:3.0.0-M1'
     // https://mvnrepository.com/artifact/io.projectreactor/reactor-core
     implementation("io.projectreactor:reactor-core:3.8.0-M6")
     // 异步 HTTP 客户端（Netty）
