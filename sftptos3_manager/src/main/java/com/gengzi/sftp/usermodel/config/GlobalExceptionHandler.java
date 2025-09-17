@@ -2,11 +2,14 @@ package com.gengzi.sftp.usermodel.config;
 
 import com.gengzi.sftp.usermodel.response.Result;
 import com.gengzi.sftp.usermodel.response.ResultCode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,6 +18,8 @@ import java.util.Map;
  */
 @RestControllerAdvice // 作用于所有 @RestController
 public class GlobalExceptionHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class.getName());
 
     /**
      * 1. 处理参数校验异常（@Valid 触发）
@@ -28,9 +33,9 @@ public class GlobalExceptionHandler {
             errorMap.put(fieldError.getField(), fieldError.getDefaultMessage());
         }
         // 封装为标准失败格式
-        return Result.fail(ResultCode.PARAM_ERROR.getCode(), 
-                          ResultCode.PARAM_ERROR.getMessage(),
-                          errorMap);
+        return Result.fail(ResultCode.PARAM_ERROR.getCode(),
+                ResultCode.PARAM_ERROR.getMessage(),
+                errorMap);
     }
 
     /**
@@ -44,10 +49,11 @@ public class GlobalExceptionHandler {
     /**
      * 3. 处理系统异常（兜底）
      */
-    @ExceptionHandler(Exception.class)
-    public Result<Void> handleSystemException(Exception e) {
-        // 生产环境建议打印日志（如 log.error("系统异常", e)）
-        return Result.fail(ResultCode.SYSTEM_ERROR.getCode(), 
-                          ResultCode.SYSTEM_ERROR.getMessage());
-    }
+//    @ExceptionHandler(Exception.class)
+//    public Result<Void> handleSystemException(Exception e) {
+//        logger.error("系统异常:{} StackTrace:{}", e.getMessage(), e.fillInStackTrace());
+//        // 生产环境建议打印日志（如 log.error("系统异常", e)）
+//        return Result.fail(ResultCode.SYSTEM_ERROR.getCode(),
+//                ResultCode.SYSTEM_ERROR.getMessage());
+//    }
 }

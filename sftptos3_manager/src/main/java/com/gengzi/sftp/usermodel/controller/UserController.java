@@ -7,6 +7,7 @@ import com.gengzi.sftp.usermodel.response.JwtResponse;
 import com.gengzi.sftp.usermodel.response.Result;
 import com.gengzi.sftp.usermodel.response.ResultCode;
 import com.gengzi.sftp.usermodel.service.UserService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,7 @@ import javax.validation.Valid;
 
 @RestController
 @RequestMapping("/api/user")
+@Tag(name = "用户管理", description = "用户管理")
 public class UserController {
 
 

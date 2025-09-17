@@ -1,5 +1,6 @@
 package com.gengzi.sftp.usermodel.dao.s3.entity;
 
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -7,6 +8,7 @@ import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 /**
  * s3存储表：s3链接桶等信息
@@ -14,6 +16,7 @@ import java.time.Instant;
 @Getter
 @Setter
 @Entity
+@Data
 @Table(name = "s3_storage", schema = "sftptos3")
 public class S3Storage {
     /**
@@ -40,9 +43,10 @@ public class S3Storage {
     /**
      * 创建时间
      */
-    @NotNull
-    @Column(name = "create_time", nullable = false)
-    private Instant createTime;
+    @Column(name = "create_time" , nullable = false,
+    updatable = false, // 禁止更新（创建后不再修改）
+    columnDefinition = "datetime NOT NULL DEFAULT CURRENT_TIMESTAMP")
+    private LocalDateTime createTime;
 
     /**
      * 更新人ID
@@ -53,9 +57,10 @@ public class S3Storage {
     /**
      * 更新时间
      */
-    @NotNull
-    @Column(name = "update_time", nullable = false)
-    private Instant updateTime;
+    @Column(name = "update_time",
+            nullable = false,
+            columnDefinition = "datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+    private LocalDateTime updateTime;
 
     /**
      * 备注信息

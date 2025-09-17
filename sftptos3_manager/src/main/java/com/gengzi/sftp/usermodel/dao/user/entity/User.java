@@ -3,11 +3,9 @@ package com.gengzi.sftp.usermodel.dao.user.entity;
 import lombok.Getter;
 import lombok.Setter;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 /**
  * 用户表：管理访问sftp服务的用户信息
@@ -21,6 +19,7 @@ public class User {
      * 主键
      */
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private Long id;
 
@@ -58,13 +57,13 @@ public class User {
      * 创建时间
      */
     @Column(name = "create_time", nullable = false)
-    private Instant createTime;
+    private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
     @Column(name = "update_time", nullable = false)
-    private Instant updateTime;
+    private LocalDateTime updateTime;
 
     /**
      * 创建人id

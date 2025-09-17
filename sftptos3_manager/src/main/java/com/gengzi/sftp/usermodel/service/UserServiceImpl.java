@@ -15,6 +15,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+
 
 @Service
 public class UserServiceImpl implements UserService{
@@ -57,6 +59,8 @@ public class UserServiceImpl implements UserService{
         user.setAccessStorageInfo(userInfoRequest.getAccessStorageInfo());
         user.setCreater(String.valueOf(details.getId()));
         user.setUpdater(String.valueOf(details.getId()));
+        user.setCreateTime(LocalDateTime.now());
+        user.setUpdateTime(LocalDateTime.now());
         userRepository.save(user);
     }
 }
