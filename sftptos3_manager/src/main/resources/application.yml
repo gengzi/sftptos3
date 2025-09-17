@@ -1,3 +1,7 @@
+
+## 服务相关
+server:
+  port: 9977
 spring:
   datasource:
     url: jdbc:mysql://localhost:3306/sftptos3?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
@@ -12,24 +16,6 @@ jpa:
   database-platform: org.hibernate.dialect.MySQL8Dialect  # 指定MySQL方言
 
 
-## sftp相关
-sftp:
-  server:
-    port: 2222
-
-## 对象存储相关
-s3:
-  endpoint: http://127.0.0.1:9000
-  accessKey: minioadmin
-  secretKey: minioadmin
-  defaultBucketName: image
-  localPath: D:\work\sso_tmp\
-  async-netty-pool:
-    coreThreads: 10
-    maxThreads: 50
-    connectionTimeout: 10
-    maxPendingConnectionAcquires: 1000
-
 ## 日志相关
 logging:
   level:
@@ -37,16 +23,20 @@ logging:
 #    org.apache.sshd.sftp.server: debug
   # 日志文件配置（可选）
   file:
-    name: logs/sftp-core-server.log  # 日志文件路径和名称
+    name: logs/sftp-manager-server.log  # 日志文件路径和名称
 
   # 滚动日志配置（按大小分割）
   logback:
     rollingpolicy:
-      file-name-pattern: logs/sftp-core-server.%d{yyyy-MM-dd}.%i.log  # 滚动文件命名格式
+      file-name-pattern: logs/sftp-manager-server.%d{yyyy-MM-dd}.%i.log  # 滚动文件命名格式
       max-file-size: 10MB  # 触发滚动的文件大小
       total-size-cap: 100MB  # 日志文件总大小上限
       max-history: 7
 
-## 服务相关
-server:
-  port: 9988
+
+
+## jwt
+user:
+  jwt:
+    jwtSecret: pwKtHLwn5wurpahhR4tZjNdEfXE3pG0rQweG/4tbV0kOAV93ji9CLxfuGWR8rRtgqvJrEC/M3RtAHQngK2QYIA==
+    jwtExpirationMs: 86400000
