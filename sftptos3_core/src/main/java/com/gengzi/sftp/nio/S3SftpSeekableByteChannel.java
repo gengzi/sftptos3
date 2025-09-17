@@ -1,9 +1,7 @@
 package com.gengzi.sftp.nio;
 
 
-import com.gengzi.sftp.nio.util.S3Util;
 import com.gengzi.sftp.s3.client.S3SftpClient;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

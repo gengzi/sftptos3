@@ -43,6 +43,10 @@ public class SfrpServerConfig {
     @Autowired
     private FileWriteListener fileWriteListener;
 
+
+    @Autowired
+    private SftpUserPasswordAuthenticator passwordAuthenticator;
+
     @Bean
     public SshServer sftpServer() throws IOException {
         SshServer server = SshServer.setUpDefaultServer();
@@ -215,22 +219,7 @@ public class SfrpServerConfig {
         });
 
         // 配置密码认证器
-        server.setPasswordAuthenticator(new PasswordAuthenticator() {
-            @Override
-            public boolean authenticate(String username, String password, ServerSession session)
-                    throws PasswordChangeRequiredException {
-                // 这里实现自定义的用户名密码验证逻辑
-                // 实际应用中应从数据库或安全存储中验证
-                // 示例：允许用户"admin"使用密码"admin123"登录
-                boolean b = "admin".equals(username) && "admin123".equals(password);
-//                if(b){
-//                    session.setAttribute("1","1");
-//                }
-
-
-                return b;
-            }
-        });
+        server.setPasswordAuthenticator(passwordAuthenticator);
         // 设置文件系统根目录
         server.setFileSystemFactory(new DynamicVirtualFileSystemFactory());
 

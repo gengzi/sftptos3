@@ -37,27 +37,6 @@ dependencyManagement{
         mavenBom org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES
     }
     dependencies {
-        // spring相关
-//        dependency  'org.springframework.boot:spring-boot-starter'
-//        dependency  'org.springframework.boot:spring-boot-starter-web'
-//        // 数据库与认证
-//        dependency  'org.springframework.boot:spring-boot-starter-data-jpa'
-//        dependency  'org.springframework.boot:spring-boot-starter-validation'
-//        dependency  'org.springframework.boot:spring-boot-starter-security'
-        dependency  'io.jsonwebtoken:jjwt:0.12.6'
-        // sftp服务相关
-        dependency  'org.apache.sshd:sshd-sftp:3.0.0-M1'
-        dependency ("io.projectreactor:reactor-core:3.8.0-M6")
-        // s3相关
-        dependency  'software.amazon.awssdk:netty-nio-client:2.32.16'
-        dependency ("software.amazon.awssdk:s3-transfer-manager:2.32.16")
-        dependency  'software.amazon.awssdk:s3:2.32.16'
-        dependency  'software.amazon.awssdk:core:2.32.16'
-        // 缓存
-        dependency ("com.github.ben-manes.caffeine:caffeine:3.2.2")
-        dependency  'io.reactivex.rxjava3:rxjava:3.1.8'
-        dependency 'org.projectlombok:lombok:1.18.30'
-        dependency  'com.squareup.okhttp3:okhttp:4.12.0'
 
     }
 }
