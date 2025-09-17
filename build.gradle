@@ -1,35 +1,67 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '2.6.13'
+    id 'org.springframework.boot' version '2.6.13' apply false
     id 'io.spring.dependency-management' version '1.0.15.RELEASE'
+
 }
 
 group = 'com.gengzi'
 version = '0.0.1-SNAPSHOT'
-sourceCompatibility = 1.17
+sourceCompatibility = '17'
 
-repositories {
-    mavenCentral()
+
+subprojects {
+    group = 'com.gengzi'
+    version = '0.0.1-SNAPSHOT'
+    sourceCompatibility = 1.17
+
+    repositories {
+        mavenCentral()
+    }
+
+    // 子项目应用 Spring Boot 插件（通过 apply 方式，因为 plugins 块不能直接嵌套）
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
 }
 
-dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.apache.sshd:sshd-sftp:3.0.0-M1'
-    // https://mvnrepository.com/artifact/io.projectreactor/reactor-core
-    implementation("io.projectreactor:reactor-core:3.8.0-M6")
-    // 异步 HTTP 客户端（Netty）
-    implementation 'software.amazon.awssdk:netty-nio-client:2.32.16'
-    implementation("software.amazon.awssdk:s3-transfer-manager:2.32.16")
-    implementation 'software.amazon.awssdk:s3:2.32.16'
-    implementation 'software.amazon.awssdk:core:2.32.16'
-    implementation("com.github.ben-manes.caffeine:caffeine:3.2.2")
-    implementation 'io.reactivex.rxjava3:rxjava:3.1.8'
-    compileOnly 'org.checkerframework:checker-qual:3.49.1'
-    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
-    testImplementation platform('org.junit:junit-bom:5.10.0')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
+allprojects {
+    repositories {
+        mavenCentral()
+        maven { url 'https://repo.spring.io/milestone' } // Spring仓库（加速Spring依赖）
+        maven { url 'https://repo.spring.io/snapshot' }
+    }
 }
+
+dependencyManagement{
+    imports {
+        mavenBom org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES
+    }
+    dependencies {
+        // spring相关
+//        dependency  'org.springframework.boot:spring-boot-starter'
+//        dependency  'org.springframework.boot:spring-boot-starter-web'
+//        // 数据库与认证
+//        dependency  'org.springframework.boot:spring-boot-starter-data-jpa'
+//        dependency  'org.springframework.boot:spring-boot-starter-validation'
+//        dependency  'org.springframework.boot:spring-boot-starter-security'
+        dependency  'io.jsonwebtoken:jjwt:0.12.6'
+        // sftp服务相关
+        dependency  'org.apache.sshd:sshd-sftp:3.0.0-M1'
+        dependency ("io.projectreactor:reactor-core:3.8.0-M6")
+        // s3相关
+        dependency  'software.amazon.awssdk:netty-nio-client:2.32.16'
+        dependency ("software.amazon.awssdk:s3-transfer-manager:2.32.16")
+        dependency  'software.amazon.awssdk:s3:2.32.16'
+        dependency  'software.amazon.awssdk:core:2.32.16'
+        // 缓存
+        dependency ("com.github.ben-manes.caffeine:caffeine:3.2.2")
+        dependency  'io.reactivex.rxjava3:rxjava:3.1.8'
+        dependency 'org.projectlombok:lombok:1.18.30'
+        dependency  'com.squareup.okhttp3:okhttp:4.12.0'
+
+    }
+}
+
 
 test {
     useJUnitPlatform()

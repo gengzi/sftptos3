@@ -1,2 +1,3 @@
 rootProject.name = 'sftptos3'
+include 'sftptos3_core'
 
