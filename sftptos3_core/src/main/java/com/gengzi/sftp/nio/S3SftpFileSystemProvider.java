@@ -4,6 +4,7 @@ import com.gengzi.sftp.cache.DirectoryContentsNamesCacheUtil;
 import com.gengzi.sftp.cache.UserPathFileAttributesCacheUtil;
 import com.gengzi.sftp.nio.constans.Constants;
 import com.gengzi.sftp.s3.client.S3SftpClient;
+import com.gengzi.sftp.s3.client.entity.ListObjectsResponse;
 import com.gengzi.sftp.s3.client.entity.ObjectHeadResponse;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -70,8 +71,8 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
             long timeOut,
             TimeUnit unit
     ) throws InterruptedException, ExecutionException, TimeoutException {
-        CompletableFuture<List<String>> currentKeyDirAllFileNames = s3Client.getCurrentKeyDirAllFileNames(bucketName, prefix);
-        return currentKeyDirAllFileNames.get(timeOut, unit);
+        CompletableFuture<ListObjectsResponse> currentKeyDirAllFileNames = s3Client.getCurrentKeyDirAllListObjects(bucketName, prefix);
+        return currentKeyDirAllFileNames.get(timeOut, unit).getObjectsNames();
     }
 
     @Override
@@ -214,7 +215,7 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
         String deletePathKey = deletePath.toRealPath(LinkOption.NOFOLLOW_LINKS).getKey();
         // 判断如果是根目录，不允许删除
         S3SftpClient s3Client = deletePath.getFileSystem().client();
-        S3SftpBasicFileAttributes s3SftpBasicFileAttributes = S3SftpBasicFileAttributes.get(deletePath, null);
+        S3SftpBasicFileAttributes s3SftpBasicFileAttributes = S3SftpBasicFileAttributes.getNoCache(deletePath);
         boolean directory = s3SftpBasicFileAttributes.isDirectory();
         String bucketName = deletePath.bucketName();
         S3SftpNioSpiConfiguration configuration = deletePath.getFileSystem().configuration();
@@ -226,7 +227,8 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
             delPath(s3Client, bucketName, deletePathKey, timeout, timeoutUnit);
         }
         if (directory) {
-            boolean emptyDirectory = s3SftpBasicFileAttributes.isEmptyDirectory();
+            deletePathKey = deletePathKey.endsWith("/") ? deletePathKey : deletePathKey + PATH_SEPARATOR;
+            boolean emptyDirectory = s3SftpBasicFileAttributes.getDirEmpty();
             if (emptyDirectory) {
                 // 是空目录，可以删除
                 delPath(s3Client, bucketName, deletePathKey, timeout, timeoutUnit);
@@ -362,7 +364,7 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
         S3SftpPath checkPath = checkPath(path);
         S3SftpPath realPath = checkPath.toRealPath(LinkOption.NOFOLLOW_LINKS);
         try {
-            S3SftpBasicFileAttributes.get(realPath, null);
+            S3SftpBasicFileAttributes.get(realPath);
         } catch (NoSuchFileException e) {
             throw new NoSuchFileException(realPath.toString());
         } catch (IOException e) {
@@ -403,7 +405,7 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
 
         if (type.equals(BasicFileAttributes.class)) {
             @SuppressWarnings("unchecked")
-            A a = (A) S3SftpBasicFileAttributes.get((S3SftpPath) s3Path, null);
+            A a = (A) S3SftpBasicFileAttributes.get((S3SftpPath) s3Path);
             return a;
         } else {
             throw new UnsupportedOperationException("cannot read attributes of type: " + type);
@@ -420,7 +422,7 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
         if (attributes.trim().isEmpty()) {
             return Collections.emptyMap();
         }
-        return S3SftpBasicFileAttributes.get(s3Path, Duration.ofMinutes(5)).toMap();
+        return S3SftpBasicFileAttributes.get(s3Path).toMap();
     }
 
     @Override

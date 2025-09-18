@@ -241,7 +241,7 @@ public class S3SftpSeekableByteChannel implements SeekableByteChannel {
         // 需要从对象存储中获取对应的文件大小
         validateOpen();
         if (this.size < 0) {
-            this.size = S3SftpBasicFileAttributes.get(path, Duration.ofMinutes(TIMEOUT_TIME_LENGTH_1)).size();
+            this.size = S3SftpBasicFileAttributes.get(path).size();
             return size;
         }
 

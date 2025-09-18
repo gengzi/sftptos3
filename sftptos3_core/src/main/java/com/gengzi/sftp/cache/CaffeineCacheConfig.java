@@ -13,7 +13,7 @@ public class CaffeineCacheConfig {
 
 
     private static final int DEFAULT_CACHE_SIZE = 100_000;
-    private static final Long EXPIRE_AFTER_WRITE_TIMEOUT = 5L;
+    private static final Long EXPIRE_AFTER_WRITE_TIMEOUT = 300L;
     private static final TimeUnit EXPIRE_AFTER_WRITE_TIME_UNIT = TimeUnit.SECONDS;
 
     /**

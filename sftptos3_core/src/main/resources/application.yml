@@ -34,7 +34,7 @@ s3:
 logging:
   level:
     com.gengzi.sftp: debug
-#    org.apache.sshd.sftp.server: debug
+    org.apache.sshd.sftp.server: debug
   # 日志文件配置（可选）
   file:
     name: logs/sftp-core-server.log  # 日志文件路径和名称

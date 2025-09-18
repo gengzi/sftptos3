@@ -8,6 +8,7 @@ import com.gengzi.sftp.nio.S3SftpNioSpiConfiguration;
 import com.gengzi.sftp.s3.client.S3ClientNameEnum;
 import org.apache.sshd.common.file.FileSystemFactory;
 import org.apache.sshd.common.file.nativefs.NativeFileSystemFactory;
+import org.apache.sshd.common.file.virtualfs.VirtualFileSystemFactory;
 import org.apache.sshd.common.session.SessionContext;
 
 import java.io.IOException;
@@ -20,13 +21,18 @@ import java.util.Map;
 
 public class DynamicVirtualFileSystemFactory implements FileSystemFactory {
 
+
+    private final VirtualFileSystemFactory virtualFileSystemFactory = new VirtualFileSystemFactory();
+
+
     @Override
     public Path getUserHomeDir(SessionContext sessionContext) throws IOException {
         ServerSessionUserInfoContext serverSessionUserInfoContext =
                 sessionContext.getAttribute(Constans.SERVERSESSIONUSERINFOCONTEXT);
 
         if (StorageTypeEnum.LOCAL.type().equals(serverSessionUserInfoContext.getAccessStorageType())) {
-            return NativeFileSystemFactory.INSTANCE.getUserHomeDir(sessionContext);
+           return virtualFileSystemFactory.getDefaultHomeDir();
+//            return NativeFileSystemFactory.INSTANCE.getUserHomeDir(sessionContext);
         }
 
         if (StorageTypeEnum.S3.type().equals(serverSessionUserInfoContext.getAccessStorageType())) {
@@ -51,7 +57,11 @@ public class DynamicVirtualFileSystemFactory implements FileSystemFactory {
                 sessionContext.getAttribute(Constans.SERVERSESSIONUSERINFOCONTEXT);
 
         if (StorageTypeEnum.LOCAL.type().equals(serverSessionUserInfoContext.getAccessStorageType())) {
-            return NativeFileSystemFactory.INSTANCE.createFileSystem(sessionContext);
+            virtualFileSystemFactory.setDefaultHomeDir(Path.of(serverSessionUserInfoContext.getUserRootPath()));
+            return virtualFileSystemFactory.createFileSystem(sessionContext);
+
+//            return NativeFileSystemFactory.INSTANCE.createFileSystem(sessionContext);
+
         }
 
         if (StorageTypeEnum.S3.type().equals(serverSessionUserInfoContext.getAccessStorageType())) {

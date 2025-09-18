@@ -1,6 +1,7 @@
 package com.gengzi.sftp.cache;
 
 
+import com.gengzi.sftp.nio.S3SftpFileSystem;
 import com.gengzi.sftp.nio.S3SftpNioSpiConfiguration;
 import com.gengzi.sftp.nio.S3SftpPath;
 import com.gengzi.sftp.s3.client.entity.ObjectHeadResponse;
@@ -10,7 +11,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * 针对ls 等命令频繁查询s3获取对象属性的缓存
- *
  */
 public class UserPathFileAttributesCacheUtil {
     private static final Logger logger = LoggerFactory.getLogger(UserPathFileAttributesCacheUtil.class);
@@ -22,15 +22,16 @@ public class UserPathFileAttributesCacheUtil {
      * @param s3SftpPath
      * @return
      */
-    public static ObjectHeadResponse getCacheValue(S3SftpPath s3SftpPath){
-        try{
+    public static ObjectHeadResponse getCacheValue(S3SftpPath s3SftpPath) {
+        try {
             String cacheKey = getCacheKey(s3SftpPath);
             return (ObjectHeadResponse) cacheManager.getUserPathFileAttributesCache().getIfPresent(cacheKey);
-        }catch (Exception e){
+        } catch (Exception e) {
             logger.error("UserPathFileAttributesCache getCacheValue error !!!");
         }
         return null;
     }
+
 
     private static String getCacheKey(S3SftpPath s3SftpPath) {
         S3SftpNioSpiConfiguration configuration = s3SftpPath.getFileSystem().configuration();
@@ -38,8 +39,14 @@ public class UserPathFileAttributesCacheUtil {
         return cacheKey;
     }
 
+    private static String getCacheKey(S3SftpFileSystem s3SftpFileSystem, String s3SftpPath) {
+        S3SftpNioSpiConfiguration configuration = s3SftpFileSystem.configuration();
+        String cacheKey = configuration.getUserPathFileAttributesCacheKey(s3SftpPath);
+        return cacheKey;
+    }
+
     public static void putCacheValue(S3SftpPath s3SftpPath, ObjectHeadResponse value) {
-        try{
+        try {
             String cacheKey = getCacheKey(s3SftpPath);
             cacheManager.getUserPathFileAttributesCache().put(cacheKey, value);
         } catch (Exception e) {
@@ -48,11 +55,21 @@ public class UserPathFileAttributesCacheUtil {
 
     }
 
+    public static void putCacheValue(S3SftpFileSystem s3SftpFileSystem, String s3SftpPath, ObjectHeadResponse value) {
+        try {
+            String cacheKey = getCacheKey(s3SftpFileSystem, s3SftpPath);
+            cacheManager.getUserPathFileAttributesCache().put(cacheKey, value);
+        } catch (Exception e) {
+            logger.error("UserPathFileAttributesCache putCacheValue error !!!");
+        }
+
+    }
+
     public static void removeCacheValue(S3SftpPath s3SftpPath) {
-        try{
+        try {
             String cacheKey = getCacheKey(s3SftpPath);
             cacheManager.getUserPathFileAttributesCache().invalidate(cacheKey);
-        }catch (Exception e){
+        } catch (Exception e) {
             logger.error("UserPathFileAttributesCache removeCacheValue error !!!");
         }
 
@@ -68,7 +85,6 @@ public class UserPathFileAttributesCacheUtil {
                 stats.missCount()
         );
     }
-
 
 
 }

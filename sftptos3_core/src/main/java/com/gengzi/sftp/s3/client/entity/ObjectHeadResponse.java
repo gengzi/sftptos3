@@ -2,7 +2,9 @@ package com.gengzi.sftp.s3.client.entity;
 
 
 import java.nio.file.attribute.FileTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 对象元信息响应类
@@ -16,33 +18,25 @@ public class ObjectHeadResponse {
     private boolean isDirectory;
     private boolean isRegularFile;
     /**
-     * 是否为空目录，目录下没有任何文件和子目录
-     * 如果是文件类型，可以默认返回false
-     */
-    private boolean isEmptyDirectory = false;
-
-    /**
      * 当前目录下所有文件或者子目录名称
      * 当前为空目录或者为文件时，返回null
      * 如果不为空目录，返回目录下的所有文件或者子目录名称（跟缓存优化有关）
      * 当然也允许不返回，返回null
      */
-    private List<String> directoryContentsNames = null;
+    private ListObjectsResponse listObjects = null;
 
     public ObjectHeadResponse(FileTime lastModifiedTime,
                               Long size,
                               Object eTag,
                               boolean isDirectory,
                               boolean isRegularFile,
-                              boolean isEmptyDirectory,
-                              List<String> directoryContentsNames) {
+                              ListObjectsResponse listObjects) {
         this.lastModifiedTime = lastModifiedTime;
         this.size = size;
         this.eTag = eTag;
         this.isDirectory = isDirectory;
         this.isRegularFile = isRegularFile;
-        this.isEmptyDirectory = isEmptyDirectory;
-        this.directoryContentsNames = directoryContentsNames;
+        this.listObjects = listObjects;
     }
 
     public FileTime getLastModifiedTime() {
@@ -65,11 +59,10 @@ public class ObjectHeadResponse {
         return isRegularFile;
     }
 
-    public boolean isEmptyDirectory() {
-        return isEmptyDirectory;
+    public ListObjectsResponse getListObjects() {
+        return listObjects;
     }
 
-    public List<String> getDirectoryContentsNames() {
-        return directoryContentsNames;
-    }
+
+
 }

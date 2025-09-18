@@ -1,6 +1,7 @@
 package com.gengzi.sftp.s3.client;
 
 import com.gengzi.sftp.nio.S3SftpNioSpiConfiguration;
+import com.gengzi.sftp.s3.client.entity.ListObjectsResponse;
 import com.gengzi.sftp.s3.client.entity.ObjectHeadResponse;
 
 import java.io.IOException;
@@ -48,7 +49,7 @@ public interface S3SftpClient<T> {
 
 
     /**
-     * 调用s3创建一个空目录
+     * 调用s3创建一个空目录,由于s3没有创建目录的接口，需要创建一个零字节对象来占位置
      *
      * @param bucketName
      * @param directoryKey
@@ -101,13 +102,14 @@ public interface S3SftpClient<T> {
 
 
     /**
-     * 获取当前key目录下的所有文件或者子目录名称
+     * 获取当前路径下的所有文件信息
      *
      * @param bucketName
      * @param prefixKey
      * @return
      */
-    CompletableFuture<List<String>> getCurrentKeyDirAllFileNames(String bucketName, String prefixKey);
+    CompletableFuture<ListObjectsResponse> getCurrentKeyDirAllListObjects(String bucketName, String prefixKey);
+
 
     /**
      * 获取对象的基础元信息（支持对象文件或者对象"目录"）

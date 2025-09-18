@@ -2,9 +2,9 @@ package com.gengzi.sftp.s3.client;
 
 import com.gengzi.sftp.nio.S3SftpNioSpiConfiguration;
 import com.gengzi.sftp.nio.constans.Constants;
+import com.gengzi.sftp.s3.client.entity.ListObjectsResponse;
 import com.gengzi.sftp.s3.client.entity.ObjectHeadResponse;
 import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -28,7 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -74,31 +74,38 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
         SdkPublisher<CommonPrefix> commonPrefixSdkPublisher = objectsAttributes.commonPrefixes();
         Single<Boolean> empty = Flowable.concat(commonPrefixSdkPublisher, contents).isEmpty();
         if (!empty.blockingGet()) {
-            boolean isEmptyDirectory = false;
-            List<String> directoryNames = null;
-            Flowable<CommonPrefix> commonPrefixFlowable = Flowable.fromPublisher(commonPrefixSdkPublisher);
-            Flowable<S3Object> contentsFlowable = Flowable.fromPublisher(contents);
-            // 判断是否为空目录
-            if (commonPrefixFlowable.isEmpty().blockingGet() && contentsFlowable.count().blockingGet() == 1L) {
-                Maybe<S3Object> s3ObjectMaybe = contentsFlowable.take(1).singleElement();
-                S3Object s3Object = s3ObjectMaybe.blockingGet();
-                String objectKey = s3Object.key();
-                if (objectKey.equals(key)) {
-                    isEmptyDirectory = true;
-                }
-            } else {
-                Flux<String> prefixMap = Flux.from(commonPrefixFlowable).map(commonPrefix -> commonPrefix.prefix());
-                Flux<String> keyMap = Flux.from(contents).map(s3Object -> s3Object.key());
-                directoryNames = Flux.concat(prefixMap, keyMap).collectList().block();
-            }
+            HashMap<String, ObjectHeadResponse> objects = new HashMap<>();
+            HashMap<String, ObjectHeadResponse> prefixes = new HashMap<>();
+
+            Flux.from(commonPrefixSdkPublisher).doOnNext(commonPrefix -> {
+                prefixes.put(commonPrefix.prefix(), new ObjectHeadResponse(
+                        FileTime.fromMillis(0),
+                        0L,
+                        null,
+                        true,
+                        false,
+                        null
+                ));
+            }).then().block();
+
+            Flux.from(contents).doOnNext(s3Object -> {
+                objects.put(s3Object.key(), new ObjectHeadResponse(
+                        FileTime.from(s3Object.lastModified()),
+                        s3Object.size(),
+                        s3Object.eTag(),
+                        false,
+                        true,
+                        null
+                ));
+            }).then().block();
+
             return new ObjectHeadResponse(
                     FileTime.fromMillis(0),
                     0L,
                     null,
                     true,
                     false,
-                    isEmptyDirectory,
-                    directoryNames
+                    new ListObjectsResponse(prefixes, objects)
             );
         } else {
             throw new NoSuchFileException("no such file,path:" + key);
@@ -121,6 +128,47 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                         return listObjectsRecursively(client, nextRequest, allFiles);
                     }
                     return CompletableFuture.completedFuture(allFiles);
+                });
+    }
+
+    private static CompletableFuture<ListObjectsResponse> listObjectsRecursively(
+            S3AsyncClient client, ListObjectsV2Request request,
+            HashMap<String, ObjectHeadResponse> objects,
+            HashMap<String, ObjectHeadResponse> prefixes) {
+
+        return client.listObjectsV2(request)
+                .thenCompose(response -> {
+                    // 处理当前页文件
+                    response.contents().stream().forEach(s3Object -> {
+                        objects.put(s3Object.key(), new ObjectHeadResponse(
+                                FileTime.from(s3Object.lastModified()),
+                                s3Object.size(),
+                                s3Object.eTag(),
+                                false,
+                                true,
+                                null
+                        ));
+                    });
+
+                    response.commonPrefixes().stream().forEach(commonPrefix -> {
+                        prefixes.put(commonPrefix.prefix(), new ObjectHeadResponse(
+                                FileTime.fromMillis(0),
+                                0L,
+                                null,
+                                true,
+                                false,
+                                null
+                        ));
+                    });
+                    // 若有更多结果，继续异步获取下一页
+                    if (response.isTruncated()) {
+                        ListObjectsV2Request nextRequest = request.toBuilder()
+                                .continuationToken(response.nextContinuationToken())
+                                .build();
+                        return listObjectsRecursively(client, nextRequest, objects, prefixes);
+                    }
+
+                    return CompletableFuture.completedFuture(new ListObjectsResponse(objects, prefixes));
                 });
     }
 
@@ -325,16 +373,10 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
         }
     }
 
-    /**
-     * 获取当前key目录下的所有文件或者子目录名称
-     *
-     * @param bucketName
-     * @param prefixKey
-     * @return
-     */
+
     @Override
-    public CompletableFuture<List<String>> getCurrentKeyDirAllFileNames(String bucketName, String prefixKey) {
-        logger.debug("getCurrentKeyDirAllFileNames bucketName:{},key:{},Path:{} ", bucketName, prefixKey);
+    public CompletableFuture<ListObjectsResponse> getCurrentKeyDirAllListObjects(String bucketName, String prefixKey) {
+        logger.debug("getCurrentKeyDirAllListObjects bucketName:{},key:{},Path:{} ", bucketName, prefixKey);
         ListObjectsV2Request request = ListObjectsV2Request.builder()
                 .bucket(bucketName)
                 .prefix(prefixKey)
@@ -342,8 +384,10 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                 .maxKeys(1000)
                 .build();
         S3AsyncClient client = this.s3Client;
-        ArrayList<String> allFiles = new ArrayList<>();
-        return listObjectsRecursively(client, request, allFiles);
+        HashMap<String, ObjectHeadResponse> objects = new HashMap<>();
+        HashMap<String, ObjectHeadResponse> prefixes = new HashMap<>();
+
+        return listObjectsRecursively(client, request, objects, prefixes);
     }
 
     /**
@@ -372,7 +416,6 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                 response.eTag(),
                 false,
                 true,
-                false,
                 null
         );
 
@@ -398,7 +441,6 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                 response.eTag(),
                 false,
                 true,
-                false,
                 null
         );
     }

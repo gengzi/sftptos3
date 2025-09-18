@@ -3,7 +3,9 @@ package com.gengzi.sftp.nio;
 
 import com.gengzi.sftp.cache.DirectoryContentsNamesCacheUtil;
 import com.gengzi.sftp.cache.UserPathFileAttributesCacheUtil;
+import com.gengzi.sftp.nio.constans.Constants;
 import com.gengzi.sftp.s3.client.S3SftpClient;
+import com.gengzi.sftp.s3.client.entity.ListObjectsResponse;
 import com.gengzi.sftp.s3.client.entity.ObjectHeadResponse;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -14,7 +16,6 @@ import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermission;
-import java.time.Duration;
 import java.util.*;
 
 public class S3SftpBasicFileAttributes implements BasicFileAttributes {
@@ -37,9 +38,10 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
             null,
             true,
             false,
-            false,
             posixFilePermissions
     );
+
+
 
     private final FileTime lastModifiedTime;
     private final Long size;
@@ -47,17 +49,13 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
     private final boolean isDirectory;
     private final boolean isRegularFile;
     private final Set<PosixFilePermission> permissions;
-
-    // 是否为空目录，目录下没有任何文件和子目录
-    private boolean isEmptyDirectory;
-
+    private Boolean isDirEmpty = false;
 
     public S3SftpBasicFileAttributes(FileTime lastModifiedTime,
                                      Long size,
                                      Object eTag,
                                      boolean isDirectory,
                                      boolean isRegularFile,
-                                     boolean isEmptyDirectory,
                                      Set<PosixFilePermission> permissions) {
         this.lastModifiedTime = lastModifiedTime;
         this.size = size;
@@ -65,11 +63,10 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
         this.isDirectory = isDirectory;
         this.isRegularFile = isRegularFile;
         this.permissions = permissions;
-        this.isEmptyDirectory = isEmptyDirectory;
 
     }
 
-    public static S3SftpBasicFileAttributes get(S3SftpPath path, Duration duration) throws IOException {
+    public static S3SftpBasicFileAttributes get(S3SftpPath path) throws IOException {
         String key = path.getKey();
         ObjectHeadResponse cacheValue = UserPathFileAttributesCacheUtil.getCacheValue(path);
         if (cacheValue != null) {
@@ -77,19 +74,109 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
         } else {
             S3SftpClient client = path.getFileSystem().client();
             ObjectHeadResponse objectHeadResponse = client.headFileOrDirObject(path.bucketName(), key);
+            // 处理空字节对象目录
+            // 处理空字节对象
+            objectHeadResponse = execZeroObject(key,objectHeadResponse);
             putChache(path, objectHeadResponse);
             return getS3SftpBasicFileAttributes(objectHeadResponse);
         }
     }
 
-    private static void putChache(S3SftpPath path, ObjectHeadResponse objectHeadResponse) {
-        if (objectHeadResponse != null && objectHeadResponse.isDirectory() && objectHeadResponse.getDirectoryContentsNames() != null) {
-            if (objectHeadResponse.isEmptyDirectory()) {
-                DirectoryContentsNamesCacheUtil.putCacheValue(path.getFileSystem(), path.getKey(), new ArrayList<String>());
-            } else {
-                DirectoryContentsNamesCacheUtil.putCacheValue(path.getFileSystem(), path.getKey(), objectHeadResponse.getDirectoryContentsNames());
+
+    public static ObjectHeadResponse execZeroObject(String key, ObjectHeadResponse objectHeadResponse){
+        ListObjectsResponse listObjects = objectHeadResponse.getListObjects();
+        if (listObjects != null && objectHeadResponse.getSize() == 0 && objectHeadResponse.isDirectory()) {
+            Map<String, ObjectHeadResponse> prefixes = listObjects.getPrefixes();
+            Map<String, ObjectHeadResponse> objects = listObjects.getObjects();
+            if ((prefixes == null || prefixes.isEmpty()) && (objects != null || objects.size() == 1)) {
+                if (objects.keySet().stream().filter(p -> p.equals(key.endsWith(Constants.PATH_SEPARATOR) ? key: key + Constants.PATH_SEPARATOR)).count() == 1) {
+                    logger.debug("空字节对象处理:{}", key);
+                    HashMap<String, ObjectHeadResponse> prefixesByZeroObject = new HashMap<>();
+                    prefixesByZeroObject.put(key, new ObjectHeadResponse(
+                            FileTime.fromMillis(0),
+                            0L,
+                            null,
+                            true,
+                            false,
+                            null));
+                    // 空字节对象
+                    return new ObjectHeadResponse(
+                            FileTime.fromMillis(0),
+                            0L,
+                            null,
+                            true,
+                            false,
+                            new ListObjectsResponse(prefixesByZeroObject, new HashMap<String, ObjectHeadResponse>())
+                    );
+                }
             }
         }
+        return objectHeadResponse;
+    }
+
+
+    public static S3SftpBasicFileAttributes getNoCache(S3SftpPath path) throws IOException {
+        String key = path.getKey();
+        S3SftpClient client = path.getFileSystem().client();
+        ObjectHeadResponse objectHeadResponse = client.headFileOrDirObject(path.bucketName(), key);
+        if (objectHeadResponse.isDirectory()) {
+            S3SftpBasicFileAttributes fileAttributes = new S3SftpBasicFileAttributes(
+                    FileTime.fromMillis(0),
+                    0L,
+                    null,
+                    true,
+                    false,
+                    posixFilePermissions
+            );
+            ListObjectsResponse listObjects = objectHeadResponse.getListObjects();
+            if (listObjects != null) {
+                List<String> objectsNames = listObjects.getObjectsNames();
+                if (objectsNames.stream().filter(objectName -> !objectName.equals(key.endsWith(Constants.PATH_SEPARATOR) ? key: key + Constants.PATH_SEPARATOR )).count() > 0) {
+                    fileAttributes.setDirEmpty(false);
+                } else {
+                    fileAttributes.setDirEmpty(true);
+                }
+            }
+            return fileAttributes;
+        } else {
+            return new S3SftpBasicFileAttributes(
+                    objectHeadResponse.getLastModifiedTime(),
+                    objectHeadResponse.getSize(),
+                    objectHeadResponse.geteTag(),
+                    false,
+                    true,
+                    posixFilePermissions
+            );
+        }
+
+    }
+
+    private static void putChache(S3SftpPath path, ObjectHeadResponse objectHeadResponse) {
+        // 处理目录，如果当前路径是一个目录
+        if (objectHeadResponse != null && objectHeadResponse.isDirectory() && objectHeadResponse.getListObjects() != null) {
+            DirectoryContentsNamesCacheUtil.putCacheValue(path.getFileSystem(), path.getKey(), objectHeadResponse.getListObjects().getObjectsNames());
+
+            ListObjectsResponse listObjects = objectHeadResponse.getListObjects();
+            if (listObjects.getPrefixes() != null && !listObjects.getPrefixes().isEmpty()) {
+                for (Map.Entry<String, ObjectHeadResponse> entry : listObjects.getPrefixes().entrySet()) {
+                    String key = entry.getKey();
+                    ObjectHeadResponse value = entry.getValue();
+                    UserPathFileAttributesCacheUtil.putCacheValue(path.getFileSystem(), key, value);
+                }
+            }
+            if (listObjects.getObjects() != null && !listObjects.getObjects().isEmpty()) {
+                // 针对零字节对象特殊处理
+                for (Map.Entry<String, ObjectHeadResponse> entry : listObjects.getObjects().entrySet()) {
+                    String key = entry.getKey();
+                    ObjectHeadResponse value = entry.getValue();
+                    UserPathFileAttributesCacheUtil.putCacheValue(path.getFileSystem(), key, value);
+                }
+            }
+        }
+
+        // 处理零字节对象特殊处理
+
+
         //TODO 可以把目录这部分删除掉
         UserPathFileAttributesCacheUtil.putCacheValue(path, objectHeadResponse);
     }
@@ -97,7 +184,6 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
     @NotNull
     private static S3SftpBasicFileAttributes getS3SftpBasicFileAttributes(ObjectHeadResponse objectHeadResponse) {
         if (objectHeadResponse.isDirectory()) {
-            DIRECTORY_ATTRIBUTES.isEmptyDirectory = objectHeadResponse.isEmptyDirectory();
             return DIRECTORY_ATTRIBUTES;
         } else {
             return new S3SftpBasicFileAttributes(
@@ -106,10 +192,17 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
                     objectHeadResponse.geteTag(),
                     false,
                     true,
-                    objectHeadResponse.isEmptyDirectory(),
                     posixFilePermissions
             );
         }
+    }
+
+    public Boolean getDirEmpty() {
+        return isDirEmpty;
+    }
+
+    public void setDirEmpty(Boolean dirEmpty) {
+        isDirEmpty = dirEmpty;
     }
 
     /**
@@ -261,9 +354,6 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
         }};
     }
 
-    public boolean isEmptyDirectory() {
-        return isEmptyDirectory;
-    }
 
     private Set<PosixFilePermission> permissions() {
         return permissions;

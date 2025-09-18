@@ -1,14 +1,20 @@
 package com.gengzi.sftp.nio;
 
 import com.gengzi.sftp.cache.DirectoryContentsNamesCacheUtil;
+import com.gengzi.sftp.cache.UserPathFileAttributesCacheUtil;
+import com.gengzi.sftp.s3.client.entity.ListObjectsResponse;
+import com.gengzi.sftp.s3.client.entity.ObjectHeadResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -38,10 +44,12 @@ public class S3SftpDirectoryStream implements DirectoryStream {
         if (cacheValue != null) {
             filterFileNams(fileSystem, path, filter, cacheValue);
         } else {
-            CompletableFuture<List<String>> currentKeyDirAllFileNames = fileSystem.client().getCurrentKeyDirAllFileNames(bucketName, path);
+            CompletableFuture<ListObjectsResponse> listObjects = fileSystem.client().getCurrentKeyDirAllListObjects(bucketName, path);
             try {
-                List<String> fileNames = currentKeyDirAllFileNames.get(fileSystem.configuration().timeout(), fileSystem.configuration().timeoutUnit());
-                filterFileNams(fileSystem, path, filter, fileNames);
+                ListObjectsResponse listObjectsResponse = listObjects.get(fileSystem.configuration().timeout(), fileSystem.configuration().timeoutUnit());
+                // 设置缓存
+                putCacheValue(fileSystem, path, listObjectsResponse);
+                filterFileNams(fileSystem, path, filter, listObjectsResponse.getObjectsNames());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException(e);
@@ -54,6 +62,48 @@ public class S3SftpDirectoryStream implements DirectoryStream {
         }
 
     }
+
+
+    private void putCacheValue(S3SftpFileSystem fileSystem, String path, ListObjectsResponse listObjectsResponse) {
+        DirectoryContentsNamesCacheUtil.putCacheValue(fileSystem, path, listObjectsResponse.getObjectsNames());
+
+        // 处理零字节对象路径
+        if(listObjectsResponse != null && (listObjectsResponse.getPrefixes() == null || listObjectsResponse.getPrefixes().isEmpty()) &&
+                (listObjectsResponse.getObjects() != null && listObjectsResponse.getObjects().size() == 1) ){
+            if(listObjectsResponse.getObjects().keySet().stream().filter(key -> key.equals(path)).count() ==1){
+                ObjectHeadResponse objectHeadResponse = listObjectsResponse.getObjects().get(path);
+                if(objectHeadResponse.getSize() == 0L){
+                    logger.debug("空字节对象处理:{}", path);
+                    // 说明是零字节对象
+                    UserPathFileAttributesCacheUtil.putCacheValue(fileSystem, path, new ObjectHeadResponse(
+                            FileTime.fromMillis(0),
+                            0L,
+                            null,
+                            true,
+                            false,
+                            null
+                    ));
+                    return;
+                }
+            }
+        }
+
+
+
+        // 设置文件属性
+        if(listObjectsResponse.getObjects() != null && listObjectsResponse.getObjects().size() > 0){
+             listObjectsResponse.getObjects().entrySet().forEach(entry -> {
+                 UserPathFileAttributesCacheUtil.putCacheValue(fileSystem, entry.getKey(), entry.getValue());
+             });
+        }
+        if (listObjectsResponse.getPrefixes() != null && listObjectsResponse.getPrefixes().size() > 0) {
+            listObjectsResponse.getPrefixes().entrySet().forEach(entry -> {
+                UserPathFileAttributesCacheUtil.putCacheValue(fileSystem, entry.getKey(), entry.getValue());
+            });
+        }
+    }
+
+
 
     private static boolean isEqualToParent(String finalDirName, Path p) {
         return ((S3SftpPath) p).getKey().equals(finalDirName);

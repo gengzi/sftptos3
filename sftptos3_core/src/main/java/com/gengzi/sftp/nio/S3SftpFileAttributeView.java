@@ -48,7 +48,7 @@ public class S3SftpFileAttributeView implements BasicFileAttributeView {
      */
     @Override
     public BasicFileAttributes readAttributes() throws IOException {
-       return S3SftpBasicFileAttributes.get(path, Duration.ofMinutes(1L));
+       return S3SftpBasicFileAttributes.get(path);
     }
 
     /**

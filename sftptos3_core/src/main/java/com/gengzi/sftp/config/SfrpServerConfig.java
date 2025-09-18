@@ -62,7 +62,7 @@ public class SfrpServerConfig {
 
         SftpSubsystemFactory factory = new SftpSubsystemFactory();
         // 设置不支持属性设置都抛出异常给客户端
-        factory.setUnsupportedAttributePolicy(UnsupportedAttributePolicy.ThrowException);
+        factory.setUnsupportedAttributePolicy(UnsupportedAttributePolicy.Warn);
         server.setSubsystemFactories(Collections.singletonList(factory));
 
 
