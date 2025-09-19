@@ -52,6 +52,8 @@ public class SftpServerConfig {
     private SftptoS3SftpEventListener sftpEventListener;
     @Autowired
     private SftpPublicKeyAuthenticator sftpPublicKeyAuthenticator;
+    @Autowired
+    private SftpSessionListener sftpSessionListener;
 
     @Bean
     public SshServer sftpServer() throws IOException {
@@ -73,6 +75,9 @@ public class SftpServerConfig {
         server.setPublickeyAuthenticator(sftpPublicKeyAuthenticator);
         // 设置文件系统根目录
         server.setFileSystemFactory(new DynamicVirtualFileSystemFactory());
+        // 设置session监听器
+        server.addSessionListener(sftpSessionListener);
+
         server.start();
         return server;
     }

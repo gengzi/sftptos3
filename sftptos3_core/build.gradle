@@ -13,6 +13,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    // 监控
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
     // sftp服务相关
     implementation 'org.apache.sshd:sshd-sftp:3.0.0-M1'
     implementation("io.projectreactor:reactor-core:3.8.0-M6")
