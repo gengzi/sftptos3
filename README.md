@@ -36,7 +36,8 @@ type=17
 put ./2.txt
 type=3 typeName= open
 
-
+-- 密钥登录
+sftp  -i E:\ssh\id_rsa -P 2222 admin@127.0.0.1
 
 
 
@@ -103,6 +104,11 @@ java -jar E:\ruanjian\arthas\arthas-boot.jar
 
 trace:
 
+### 密钥生成
+```angular2html
+# 生成 RSA 密钥对（-t 指定算法，-b 指定密钥长度，-C 添加注释）
+ssh-keygen -t rsa -b 2048 -C "your_email@example.com"
+```
 
 
 

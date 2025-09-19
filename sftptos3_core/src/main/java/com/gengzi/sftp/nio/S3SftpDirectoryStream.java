@@ -14,7 +14,6 @@ import java.nio.file.attribute.FileTime;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -63,50 +62,58 @@ public class S3SftpDirectoryStream implements DirectoryStream {
 
     }
 
+    private static boolean isEqualToParent(String finalDirName, Path p) {
+        return ((S3SftpPath) p).getKey().equals(finalDirName);
+    }
 
     private void putCacheValue(S3SftpFileSystem fileSystem, String path, ListObjectsResponse listObjectsResponse) {
+        // 如果响应为空，直接返回避免后续处理
+        if (listObjectsResponse == null) {
+            return;
+        }
         DirectoryContentsNamesCacheUtil.putCacheValue(fileSystem, path, listObjectsResponse.getObjectsNames());
+        // 提取对象和前缀集合（减少重复调用）
+        Map<String, ObjectHeadResponse> objects = listObjectsResponse.getObjects();
+        Map<String, ObjectHeadResponse> prefixes = listObjectsResponse.getPrefixes();
 
-        // 处理零字节对象路径
-        if(listObjectsResponse != null && (listObjectsResponse.getPrefixes() == null || listObjectsResponse.getPrefixes().isEmpty()) &&
-                (listObjectsResponse.getObjects() != null && listObjectsResponse.getObjects().size() == 1) ){
-            if(listObjectsResponse.getObjects().keySet().stream().filter(key -> key.equals(path)).count() ==1){
-                ObjectHeadResponse objectHeadResponse = listObjectsResponse.getObjects().get(path);
-                if(objectHeadResponse.getSize() == 0L){
-                    logger.debug("空字节对象处理:{}", path);
-                    // 说明是零字节对象
-                    UserPathFileAttributesCacheUtil.putCacheValue(fileSystem, path, new ObjectHeadResponse(
-                            FileTime.fromMillis(0),
-                            0L,
-                            null,
-                            true,
-                            false,
-                            null
-                    ));
-                    return;
-                }
+        // 检查前缀为空且对象集合只有一个元素
+        boolean isPrefixesEmpty = prefixes == null || prefixes.isEmpty();
+        boolean isSingleObject = objects != null && objects.size() == 1;
+
+        if (isPrefixesEmpty && isSingleObject && objects.containsKey(path)) {
+            ObjectHeadResponse objectHeadResponse = objects.get(path);
+            // 验证对象不为空且大小为0
+            if (objectHeadResponse != null && objectHeadResponse.getSize() == 0L) {
+                logger.debug("zero object file change dir:{}", path);
+                UserPathFileAttributesCacheUtil.putCacheValue(fileSystem, path,
+                        new ObjectHeadResponse(
+                                FileTime.fromMillis(0),
+                                0L,
+                                null,
+                                true,
+                                false
+                        ));
+                return;
             }
         }
 
+        // 批量设置对象属性缓存
+        cacheEntries(fileSystem, objects);
 
-
-        // 设置文件属性
-        if(listObjectsResponse.getObjects() != null && listObjectsResponse.getObjects().size() > 0){
-             listObjectsResponse.getObjects().entrySet().forEach(entry -> {
-                 UserPathFileAttributesCacheUtil.putCacheValue(fileSystem, entry.getKey(), entry.getValue());
-             });
-        }
-        if (listObjectsResponse.getPrefixes() != null && listObjectsResponse.getPrefixes().size() > 0) {
-            listObjectsResponse.getPrefixes().entrySet().forEach(entry -> {
-                UserPathFileAttributesCacheUtil.putCacheValue(fileSystem, entry.getKey(), entry.getValue());
-            });
-        }
+        // 批量设置前缀属性缓存
+        cacheEntries(fileSystem, prefixes);
     }
 
-
-
-    private static boolean isEqualToParent(String finalDirName, Path p) {
-        return ((S3SftpPath) p).getKey().equals(finalDirName);
+    /**
+     * 批量缓存条目到属性缓存
+     */
+    private void cacheEntries(S3SftpFileSystem fileSystem, Map<String, ObjectHeadResponse> entries) {
+        if (entries == null || entries.isEmpty()) {
+            return;
+        }
+        entries.forEach((key, value) ->
+                UserPathFileAttributesCacheUtil.putCacheValue(fileSystem, key, value)
+        );
     }
 
     private void filterFileNams(S3SftpFileSystem fileSystem, String path, Filter<? super Path> filter, List<String> fileNames) {

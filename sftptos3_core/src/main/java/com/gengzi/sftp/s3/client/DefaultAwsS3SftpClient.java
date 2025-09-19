@@ -83,8 +83,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                         0L,
                         null,
                         true,
-                        false,
-                        null
+                        false
                 ));
             }).then().block();
 
@@ -94,8 +93,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                         s3Object.size(),
                         s3Object.eTag(),
                         false,
-                        true,
-                        null
+                        true
                 ));
             }).then().block();
 
@@ -145,8 +143,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                                 s3Object.size(),
                                 s3Object.eTag(),
                                 false,
-                                true,
-                                null
+                                true
                         ));
                     });
 
@@ -156,8 +153,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                                 0L,
                                 null,
                                 true,
-                                false,
-                                null
+                                false
                         ));
                     });
                     // 若有更多结果，继续异步获取下一页
@@ -415,8 +411,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                 response.contentLength(),
                 response.eTag(),
                 false,
-                true,
-                null
+                true
         );
 
     }
@@ -440,8 +435,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                 response.contentLength(),
                 response.eTag(),
                 false,
-                true,
-                null
+                true
         );
     }
 

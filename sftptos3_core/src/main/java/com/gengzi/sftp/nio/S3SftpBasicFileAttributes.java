@@ -18,6 +18,10 @@ import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.*;
 
+/**
+ *  s3sftp文件属性
+ *
+ */
 public class S3SftpBasicFileAttributes implements BasicFileAttributes {
 
     private static final Logger logger = LoggerFactory.getLogger(S3SftpBasicFileAttributes.class.getName());
@@ -32,6 +36,9 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
         posixFilePermissions.add(PosixFilePermission.GROUP_READ);
         posixFilePermissions.add(PosixFilePermission.GROUP_WRITE);
     }
+    /**
+     * 目录属性
+     */
     private static final S3SftpBasicFileAttributes DIRECTORY_ATTRIBUTES = new S3SftpBasicFileAttributes(
             FileTime.fromMillis(0),
             0L,
@@ -75,42 +82,61 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
             S3SftpClient client = path.getFileSystem().client();
             ObjectHeadResponse objectHeadResponse = client.headFileOrDirObject(path.bucketName(), key);
             // 处理空字节对象目录
-            // 处理空字节对象
             objectHeadResponse = execZeroObject(key,objectHeadResponse);
             putChache(path, objectHeadResponse);
             return getS3SftpBasicFileAttributes(objectHeadResponse);
         }
     }
 
+    public static ObjectHeadResponse execZeroObject(String key, ObjectHeadResponse objectHeadResponse) {
+        // 提取路径分隔符常量，避免重复调用
+        String pathSeparator = Constants.PATH_SEPARATOR;
+        // 处理目标key（确保以路径分隔符结尾）
+        String targetKey = key.endsWith(pathSeparator) ? key : key + pathSeparator;
 
-    public static ObjectHeadResponse execZeroObject(String key, ObjectHeadResponse objectHeadResponse){
         ListObjectsResponse listObjects = objectHeadResponse.getListObjects();
-        if (listObjects != null && objectHeadResponse.getSize() == 0 && objectHeadResponse.isDirectory()) {
+
+        // 外层条件判断：列表不为空且是大小为0的目录
+        if (listObjects != null
+                && objectHeadResponse.getSize() == 0
+                && objectHeadResponse.isDirectory()) {
+
             Map<String, ObjectHeadResponse> prefixes = listObjects.getPrefixes();
             Map<String, ObjectHeadResponse> objects = listObjects.getObjects();
-            if ((prefixes == null || prefixes.isEmpty()) && (objects != null || objects.size() == 1)) {
-                if (objects.keySet().stream().filter(p -> p.equals(key.endsWith(Constants.PATH_SEPARATOR) ? key: key + Constants.PATH_SEPARATOR)).count() == 1) {
-                    logger.debug("空字节对象处理:{}", key);
-                    HashMap<String, ObjectHeadResponse> prefixesByZeroObject = new HashMap<>();
-                    prefixesByZeroObject.put(key, new ObjectHeadResponse(
+
+            // 校验前缀为空且对象集合符合条件（非空且仅有一个元素）
+            boolean isPrefixesEmpty = prefixes == null || prefixes.isEmpty();
+            boolean isSingleObject = objects != null && objects.size() == 1;
+
+            if (isPrefixesEmpty && isSingleObject) {
+                // 检查唯一对象是否匹配目标key（直接containsKey比流操作更高效）
+                if (objects.containsKey(targetKey)) {
+                    logger.debug("zero object file change dir:{}", key);
+
+                    // 构建新的前缀映射
+                    Map<String, ObjectHeadResponse> zeroObjectPrefixes = new HashMap<>();
+                    zeroObjectPrefixes.put(key, new ObjectHeadResponse(
                             FileTime.fromMillis(0),
                             0L,
                             null,
                             true,
-                            false,
-                            null));
-                    // 空字节对象
+                            false
+                    ));
+
+                    // 构建并返回新的响应对象
                     return new ObjectHeadResponse(
                             FileTime.fromMillis(0),
                             0L,
                             null,
                             true,
                             false,
-                            new ListObjectsResponse(prefixesByZeroObject, new HashMap<String, ObjectHeadResponse>())
+                            new ListObjectsResponse(zeroObjectPrefixes, new HashMap<>())
                     );
                 }
             }
         }
+
+        // 不满足条件时返回原始响应
         return objectHeadResponse;
     }
 
@@ -165,7 +191,6 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
                 }
             }
             if (listObjects.getObjects() != null && !listObjects.getObjects().isEmpty()) {
-                // 针对零字节对象特殊处理
                 for (Map.Entry<String, ObjectHeadResponse> entry : listObjects.getObjects().entrySet()) {
                     String key = entry.getKey();
                     ObjectHeadResponse value = entry.getValue();
@@ -173,9 +198,6 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
                 }
             }
         }
-
-        // 处理零字节对象特殊处理
-
 
         //TODO 可以把目录这部分删除掉
         UserPathFileAttributesCacheUtil.putCacheValue(path, objectHeadResponse);
