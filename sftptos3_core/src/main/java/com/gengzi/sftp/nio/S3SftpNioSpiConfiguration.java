@@ -3,12 +3,11 @@ package com.gengzi.sftp.nio;
 import com.gengzi.sftp.nio.constans.Constants;
 import com.gengzi.sftp.s3.client.S3ClientNameEnum;
 import org.apache.sshd.common.session.SessionContext;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.internal.BucketUtils;
 
 import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -22,6 +21,7 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
     public static final String ACCESS_KEY = "s3sftp.accessKey";
     public static final String SECRET_KEY = "s3sftp.secretKey";
     public static final String REGION = "s3sftp.region";
+    public static final Region REGION_VAL = Region.US_EAST_1;
 
     // 默认超时时间
     public static final String TIME_OUT = "s3sftp.timeout";
@@ -29,7 +29,7 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
     // env配置项
     // 默认用户根目录
     public static final String USER_ROOT_PATH = "s3sftp.userRootPath";
-    public static final String USER_ROOT_PATH_DEFAULT_VAL = Constants.PATH_SEPARATOR;
+    public static final String USER_ROOT_PATH_DEFAULT_VAL = "";
     // 默认客户端实现
     public static final String CLIENT_NAME = "s3sftp.clientName";
     public static final S3ClientNameEnum CLIENT_NAME_DEFAULT_VAL = S3ClientNameEnum.DEFAULT_AWS_S3;
@@ -56,6 +56,7 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
         put(TIME_OUT_UNIT, TIME_OUT_UNIT_VAL);
         put(CLIENT_NAME, CLIENT_NAME_DEFAULT_VAL);
         put(USER_ROOT_PATH, USER_ROOT_PATH_DEFAULT_VAL);
+        put(REGION, REGION_VAL);
 
 
         // 覆盖默认配置
@@ -125,14 +126,26 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
         return (S3ClientNameEnum) get(CLIENT_NAME);
     }
 
+    /**
+     * 兼容根目录为 '\' '/' 的情况，都认为是用户根目录为整个对象存储下的
+     * @return
+     */
     public String userRootPath() {
-        return get(USER_ROOT_PATH).toString();
+        String root = get(USER_ROOT_PATH).toString();
+        if("\\".equals(root) || Constants.PATH_SEPARATOR.equals(root)){
+            return "";
+        }
+        return root;
     }
 
     public SessionContext sessionContext() {
         return (SessionContext) get(SESSION_CONTEXT);
     }
 
+
+    public String region() {
+        return get(REGION).toString();
+    }
 
     /**
      * 返回UserPathFileAttributesCacheKey

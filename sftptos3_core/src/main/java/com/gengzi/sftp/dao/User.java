@@ -3,10 +3,7 @@ package com.gengzi.sftp.dao;
 import lombok.Getter;
 import lombok.Setter;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 import java.time.Instant;
 
 /**
@@ -100,5 +97,9 @@ public class User {
     @javax.validation.constraints.Size(max = 128)
     @Column(name = "remark", length = 128)
     private String remark;
+
+    @Lob
+    @Column(name = "secret_key")
+    private String secretKey;
 
 }

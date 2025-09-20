@@ -7,7 +7,6 @@ import com.gengzi.sftp.nio.S3SftpFileSystemProvider;
 import com.gengzi.sftp.nio.S3SftpNioSpiConfiguration;
 import com.gengzi.sftp.s3.client.S3ClientNameEnum;
 import org.apache.sshd.common.file.FileSystemFactory;
-import org.apache.sshd.common.file.nativefs.NativeFileSystemFactory;
 import org.apache.sshd.common.file.virtualfs.VirtualFileSystemFactory;
 import org.apache.sshd.common.session.SessionContext;
 
@@ -70,6 +69,7 @@ public class DynamicVirtualFileSystemFactory implements FileSystemFactory {
             env.put(S3SftpNioSpiConfiguration.USER_ROOT_PATH, serverSessionUserInfoContext.getUserRootPath());
             env.put(S3SftpNioSpiConfiguration.CLIENT_NAME, S3ClientNameEnum.DEFAULT_AWS_S3);
             env.put(S3SftpNioSpiConfiguration.SESSION_CONTEXT, sessionContext);
+            env.put(S3SftpNioSpiConfiguration.REGION, serverSessionUserInfoContext.getS3Region());
             URI s3Urix = URI.create(serverSessionUserInfoContext.getS3SftpSchemeUri());
             S3SftpFileSystemProvider s3FileSystemProvider = new S3SftpFileSystemProvider();
             FileSystem fileSystem = s3FileSystemProvider.newFileSystem(s3Urix, env);

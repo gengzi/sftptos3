@@ -1,12 +1,8 @@
 package com.gengzi.sftp.config;
 
-import com.gengzi.sftp.constans.Constans;
-import com.gengzi.sftp.context.ServerSessionUserInfoContext;
-import com.gengzi.sftp.dao.S3Storage;
 import com.gengzi.sftp.dao.S3StorageRepository;
 import com.gengzi.sftp.dao.User;
 import com.gengzi.sftp.dao.UserRepository;
-import com.gengzi.sftp.enums.StorageTypeEnum;
 import org.apache.sshd.common.config.keys.AuthorizedKeyEntry;
 import org.apache.sshd.common.config.keys.PublicKeyEntryResolver;
 import org.apache.sshd.server.auth.AsyncAuthException;
@@ -20,7 +16,6 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.PublicKey;
-import java.util.Optional;
 
 @Component
 public class SftpPublicKeyAuthenticator implements PublickeyAuthenticator {
@@ -41,9 +36,14 @@ public class SftpPublicKeyAuthenticator implements PublickeyAuthenticator {
         if(userByUsername == null){
             return false;
         }
-        String keyData = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDz7mxtNKEHWE8Hq0vc2f90aIoT/mxfNDVRhdBya4FYAS28dbU1QD7v4lvzp7Ga/XvXnZCCTsHnO0puLKuzH8SBXLkMKGNQggtIkAGhKp/aykI9IbHqXE5ImnIcNYFVzGUIdhYvJVBRgUV8PS7pYeBzf5QiPQCwoIpFJsEe7ow5LCk6np2ZRVIgXvJWR1NIfSL3mFnSEHKcv+SUrvjbY5ezcKk4FFs7WbfcURpI7KAKjFiKqoH2V7KJRoTjXo6qID9H95rd6feBtKLiM5bI7bO4tJNQWfnzoGN9sAmxgWuhUhsbPR1/khJuKEXzZKxTP/zJ0t7V4kQbHfw9etZmwpHF gengzi@qq.com\n";
+
+        String secretKey = userByUsername.getSecretKey();
+        if(secretKey == null || "".equals(secretKey)){
+            return false;
+        }
+
         // 从数据库读取公钥字符串并解析为 AuthorizedKeyEntry
-        AuthorizedKeyEntry entry = AuthorizedKeyEntry.parseAuthorizedKeyEntry(keyData);
+        AuthorizedKeyEntry entry = AuthorizedKeyEntry.parseAuthorizedKeyEntry(secretKey);
         // 使用指定的解析器将 entry 转换为 PublicKey
         try {
             PublicKey userPublicKey = entry.resolvePublicKey(serverSession, PublicKeyEntryResolver.IGNORING);

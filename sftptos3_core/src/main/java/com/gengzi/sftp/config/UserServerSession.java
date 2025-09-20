@@ -6,7 +6,6 @@ import com.gengzi.sftp.context.ServerSessionUserInfoContext;
 import com.gengzi.sftp.dao.S3Storage;
 import com.gengzi.sftp.dao.S3StorageRepository;
 import com.gengzi.sftp.dao.User;
-import com.gengzi.sftp.dao.UserRepository;
 import com.gengzi.sftp.enums.StorageTypeEnum;
 import org.apache.sshd.server.session.ServerSession;
 import org.slf4j.Logger;
@@ -41,7 +40,8 @@ public class UserServerSession {
                         userByUsername.getUsername(),
                         userByUsername.getUserRootPath(),
                         userByUsername.getAccessStorageType(),
-                        s3SftpSchemeUri
+                        s3SftpSchemeUri,
+                        s3Storage.getRegion()
                 );
                 serverSession.setAttribute(Constans.SERVERSESSIONUSERINFOCONTEXT,serverSessionUserInfoContext);
                 return true;
@@ -54,7 +54,7 @@ public class UserServerSession {
                 userByUsername.getUsername(),
                 userByUsername.getUserRootPath(),
                 userByUsername.getAccessStorageType(),
-                ""
+                "",""
         );
         serverSession.setAttribute(Constans.SERVERSESSIONUSERINFOCONTEXT,serverSessionUserInfoContext);
         return true;

@@ -13,12 +13,17 @@ public class ServerSessionUserInfoContext {
 
     private String accessStorageType;
 
-    public ServerSessionUserInfoContext(Long userId, String username, String userRootPath,String accessStorageType, String s3SftpSchemeUri) {
+    private String s3Region;
+
+
+    public ServerSessionUserInfoContext(Long userId, String username, String userRootPath,
+                                        String accessStorageType, String s3SftpSchemeUri, String s3Region) {
         this.userId = userId;
         this.username = username;
         this.userRootPath = userRootPath;
         this.s3SftpSchemeUri = s3SftpSchemeUri;
         this.accessStorageType = accessStorageType;
+        this.s3Region = s3Region;
     }
 
     public Long getUserId() {
@@ -39,5 +44,9 @@ public class ServerSessionUserInfoContext {
 
     public String getAccessStorageType() {
         return accessStorageType;
+    }
+
+    public String getS3Region() {
+        return s3Region;
     }
 }

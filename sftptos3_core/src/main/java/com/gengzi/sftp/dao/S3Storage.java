@@ -4,6 +4,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.persistence.*;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.time.Instant;
 
 /**
@@ -101,5 +103,10 @@ public class S3Storage {
     @javax.validation.constraints.NotNull
     @Column(name = "s3_name", nullable = false, length = 45)
     private String s3Name;
+
+    @Size(max = 256)
+    @NotNull
+    @Column(name = "region", nullable = false, length = 256)
+    private String region;
 
 }

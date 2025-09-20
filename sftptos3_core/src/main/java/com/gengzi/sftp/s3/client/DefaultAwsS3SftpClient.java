@@ -16,6 +16,7 @@ import software.amazon.awssdk.core.BytesWrapper;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.core.async.SdkPublisher;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Publisher;
@@ -186,7 +187,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
 //                .build();
 
         return S3AsyncClient.builder()
-
+                .region(Region.of(s3SftpNioSpiConfiguration.region()))
                 .endpointOverride(s3SftpNioSpiConfiguration.endpointUri())
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(s3SftpNioSpiConfiguration.accessKey(), s3SftpNioSpiConfiguration.secretKey())
