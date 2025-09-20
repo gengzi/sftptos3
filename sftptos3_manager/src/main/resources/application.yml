@@ -8,12 +8,12 @@ spring:
     username: root  # 你的MySQL用户名
     password: 111  # 你的MySQL密码
     driver-class-name: com.mysql.cj.jdbc.Driver
-jpa:
-  show-sql: true  # 控制台打印SQL语句
-  properties:
-    hibernate:
-      format_sql: true  # 格式化SQL
-  database-platform: org.hibernate.dialect.MySQL8Dialect  # 指定MySQL方言
+  jpa:
+    show-sql: true  # 控制台打印SQL语句
+    properties:
+      hibernate:
+        format_sql: true  # 格式化SQL
+    database-platform: org.hibernate.dialect.MySQL8Dialect  # 指定MySQL方言
 
 
 ## 日志相关

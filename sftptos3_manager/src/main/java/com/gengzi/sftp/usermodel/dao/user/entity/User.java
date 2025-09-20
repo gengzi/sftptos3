@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.persistence.*;
-import java.time.Instant;
 import java.time.LocalDateTime;
 
 /**
@@ -50,7 +49,7 @@ public class User {
     /**
      * 访问存储的连接信息
      */
-    @Column(name = "access_storage_info", nullable = false, length = 512)
+    @Column(name = "access_storage_info", length = 512)
     private String accessStorageInfo;
 
     /**
@@ -82,5 +81,12 @@ public class User {
      */
     @Column(name = "remark", length = 128)
     private String remark;
+
+    /**
+     * 客户端公钥
+     */
+    @Lob
+    @Column(name = "secret_key")
+    private String secretKey;
 
 }

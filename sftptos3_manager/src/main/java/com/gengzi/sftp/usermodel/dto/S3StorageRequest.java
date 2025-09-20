@@ -1,7 +1,6 @@
 package com.gengzi.sftp.usermodel.dto;
 
 import lombok.Data;
-import lombok.Value;
 
 import javax.validation.constraints.NotBlank;
 import java.io.Serializable;
@@ -21,4 +20,7 @@ public class S3StorageRequest implements Serializable {
     String accessSecret;
     @NotBlank
     String s3Name;
+    @NotBlank
+    String region;
+
 }

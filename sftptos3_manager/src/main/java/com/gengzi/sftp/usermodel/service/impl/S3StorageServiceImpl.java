@@ -1,8 +1,10 @@
 package com.gengzi.sftp.usermodel.service.impl;
 
+import com.gengzi.sftp.usermodel.config.BusinessException;
 import com.gengzi.sftp.usermodel.dao.s3.entity.S3Storage;
 import com.gengzi.sftp.usermodel.dao.s3.repository.S3StorageRepository;
 import com.gengzi.sftp.usermodel.dto.S3StorageRequest;
+import com.gengzi.sftp.usermodel.response.ResultCode;
 import com.gengzi.sftp.usermodel.response.S3NamesResponse;
 import com.gengzi.sftp.usermodel.security.UserPrincipal;
 import com.gengzi.sftp.usermodel.service.S3StorageService;
@@ -28,6 +30,10 @@ public class S3StorageServiceImpl implements S3StorageService {
 
     @Override
     public void createS3Storage(S3StorageRequest s3StorageRequest) {
+        // 判断名称标识是否已经存在
+        if (s3StorageRepository.existsByS3Name(s3StorageRequest.getS3Name())){
+            throw new BusinessException(ResultCode.CONFIG_EXIST.getCode(), "名称标识已经存在");
+        }
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserPrincipal details = (UserPrincipal) authentication.getPrincipal();
         S3Storage s3Storage = new S3Storage();
@@ -36,6 +42,7 @@ public class S3StorageServiceImpl implements S3StorageService {
         s3Storage.setAccessKey(s3StorageRequest.getAccessKey());
         s3Storage.setAccessSecret(s3StorageRequest.getAccessSecret());
         s3Storage.setS3Name(s3StorageRequest.getS3Name());
+        s3Storage.setRegion(s3StorageRequest.getRegion());
         s3Storage.setStatus(true);
         s3Storage.setCreator(details.getId());
         s3Storage.setUpdater(details.getId());
@@ -51,7 +58,7 @@ public class S3StorageServiceImpl implements S3StorageService {
 
     @Override
     public Page<S3Storage> list(String s3Name, Pageable pageable) {
-// 构建动态查询条件
+        // 构建动态查询条件
         Specification<S3Storage> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 

@@ -2,8 +2,6 @@ package com.gengzi.sftp.usermodel.controller;
 
 
 import com.gengzi.sftp.usermodel.dto.S3StorageRequest;
-import com.gengzi.sftp.usermodel.dto.UserLoginRequest;
-import com.gengzi.sftp.usermodel.response.JwtResponse;
 import com.gengzi.sftp.usermodel.response.Result;
 import com.gengzi.sftp.usermodel.service.S3StorageService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,8 +27,6 @@ public class S3StorageController {
         storageService.createS3Storage(s3StorageRequest);
         return Result.success(null);
     }
-
-
     /**
      * 获取现在已存在的s3存储信息名称
      */

@@ -2,7 +2,7 @@ package com.gengzi.sftp.usermodel.security;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.gengzi.sftp.usermodel.dao.user.entity.User;
+import com.gengzi.sftp.usermodel.dao.user.entity.Admin;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -31,7 +31,7 @@ public class UserPrincipal implements UserDetails {
         this.authorities = authorities;
     }
 
-    public static UserPrincipal create(User user) {
+    public static UserPrincipal create(Admin user) {
         // 这里简化处理，实际应用中可能需要添加角色信息
         Collection<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
 

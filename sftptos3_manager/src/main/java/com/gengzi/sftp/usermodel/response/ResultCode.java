@@ -22,7 +22,11 @@ public enum ResultCode {
     // 自定义业务异常
     USER_EXIST(1001, "用户名已存在"),
     USER_NOT_EXIST(1002, "用户不存在"),
-    ORDER_CANCELED(1003, "订单已取消");
+
+    ORDER_CANCELED(1003, "订单已取消"),
+    CONFIG_EXIST(1004, "当前配置存在"),
+    ADMIN_USER_PROHIBIT_DEL(1005, "admin管理员禁止删除"),
+    ;
 
     private final Integer code;
     private final String message;

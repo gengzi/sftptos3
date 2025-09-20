@@ -7,7 +7,6 @@ import lombok.Setter;
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
-import java.time.Instant;
 import java.time.LocalDateTime;
 
 /**
@@ -108,5 +107,13 @@ public class S3Storage {
     @NotNull
     @Column(name = "s3_name", nullable = false, length = 45)
     private String s3Name;
+
+
+    /**
+     * 地区
+     */
+    @Size(max = 256)
+    @Column(name = "region", nullable = false, length = 256)
+    private String region;
 
 }

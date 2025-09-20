@@ -9,17 +9,10 @@ import java.io.Serializable;
  * DTO for {@link com.gengzi.sftp.usermodel.dao.user.entity.User}
  */
 @Data
-public class UserInfoRequest implements Serializable {
+public class AdminInfoUpdateRequest implements Serializable {
     @NotBlank
-    String username;
+    Long id;
     @NotBlank
     String passwd;
-    @NotBlank
-    String userRootPath;
-    @NotBlank
-    String accessStorageType;
-    String accessStorageInfo;
-
-    String secretKey;
 
 }
