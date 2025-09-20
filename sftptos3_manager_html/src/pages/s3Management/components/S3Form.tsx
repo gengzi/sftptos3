@@ -85,6 +85,14 @@ const S3Form: React.FC<S3FormProps> = ({
           <Input placeholder="请输入S3桶名称" />
         </Form.Item>
 
+        <Form.Item
+          label="Region"
+          name="region"
+          tooltip="指定API请求的地区，例如: us-east-1"
+        >
+          <Input placeholder="请输入地区" />
+        </Form.Item>
+
         <Form.Item wrapperCol={{ offset: 6, span: 16 }}>
           <Space>
             <Button type="primary" htmlType="submit">

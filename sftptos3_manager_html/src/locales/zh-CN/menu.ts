@@ -52,5 +52,8 @@ export default {
   'menu.editor.flow': '流程编辑器',
   'menu.editor.mind': '脑图编辑器',
   'menu.editor.koni': '拓扑编辑器',
-  'menu.认证测试': '认证测试',
+  'menu.monitor': '服务监控',
+  'menu.adminManagement': '管理员管理',
+  'menu.adminManagement.list': '管理员列表',
+
 };

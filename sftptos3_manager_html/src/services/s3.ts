@@ -8,6 +8,7 @@ export interface S3Config {
   accessKey: string;
   accessSecret: string;
   bucket: string;
+  region?: string;
 }
 
 // 创建S3存储配置
@@ -18,10 +19,18 @@ export async function createS3Storage(params: S3Config) {
       data: params,
     });
     
-    return {
-      success: true,
-      data: response,
-    };
+    // 处理响应格式
+    if (response && (response.success || response.code === 200)) {
+      return {
+        success: true,
+        data: response,
+      };
+    } else {
+      return {
+        success: false,
+        message: response.message || '创建S3存储配置失败',
+      };
+    }
   } catch (error) {
     console.error('创建S3存储配置失败:', error);
     return {
@@ -71,10 +80,18 @@ export async function updateS3Storage(id: string, params: S3Config) {
       data: params,
     });
     
-    return {
-      success: true,
-      data: response,
-    };
+    // 处理响应格式
+    if (response && (response.success || response.code === 200)) {
+      return {
+        success: true,
+        data: response,
+      };
+    } else {
+      return {
+        success: false,
+        message: response.message || '更新S3存储配置失败',
+      };
+    }
   } catch (error) {
     console.error('更新S3存储配置失败:', error);
     return {
@@ -91,10 +108,18 @@ export async function deleteS3Storage(id: string) {
       method: 'DELETE',
     });
     
-    return {
-      success: true,
-      data: response,
-    };
+    // 处理响应格式
+    if (response && (response.success || response.code === 200)) {
+      return {
+        success: true,
+        data: response,
+      };
+    } else {
+      return {
+        success: false,
+        message: response.message || '删除S3存储配置失败',
+      };
+    }
   } catch (error) {
     console.error('删除S3存储配置失败:', error);
     return {

@@ -17,8 +17,9 @@ const Settings: ProLayoutProps & {
   colorWeak: false,
   title: 'SftptoS3后台管理',
   pwa: true,
-  logo: 'https://gw.alipayobjects.com/zos/rmsportal/KDpgvguMpGfqaHPjicRK.svg',
+  logo: '/sftp_to_s3_icon.svg',
   iconfontUrl: '',
+  locale: 'zh-CN', // 默认语言设置为中文
   token: {
     // 参见ts声明，demo 见文档，通过token 修改样式
     //https://procomponents.ant.design/components/layout#%E9%80%9A%E8%BF%87-token-%E4%BF%AE%E6%94%B9%E6%A0%B7%E5%BC%8F

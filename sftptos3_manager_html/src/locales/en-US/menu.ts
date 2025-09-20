@@ -52,5 +52,8 @@ export default {
   'menu.editor.flow': 'Flow Editor',
   'menu.editor.mind': 'Mind Editor',
   'menu.editor.koni': 'Koni Editor',
-  'menu.认证测试': 'Authentication Test',
+  'menu.monitor': 'Service Monitoring',
+  'menu.adminManagement': 'Admin Management',
+  'menu.adminManagement.list': 'Admin List',
+
 };

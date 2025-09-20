@@ -12,6 +12,7 @@ interface S3Config {
   accessKey: string;
   secretKey: string;
   bucket: string;
+  region?: string;
 }
 
 const S3Management: React.FC = () => {
@@ -68,7 +69,8 @@ const S3Management: React.FC = () => {
         endpoint: values.endpoint,
         accessKey: values.accessKey,
         accessSecret: values.secretKey, // 将secretKey映射为accessSecret以匹配API要求
-        bucket: values.bucket
+        bucket: values.bucket,
+        region: values.region
       };
       
       const response = await createS3Storage(requestData);
@@ -96,7 +98,8 @@ const S3Management: React.FC = () => {
         endpoint: values.endpoint,
         accessKey: values.accessKey,
         accessSecret: values.secretKey, // 将secretKey映射为accessSecret以匹配API要求
-        bucket: values.bucket
+        bucket: values.bucket,
+        region: values.region
       };
       
       if (currentConfig && currentConfig.id) {
@@ -179,6 +182,13 @@ const S3Management: React.FC = () => {
       title: '桶',
       dataIndex: 'bucket',
       key: 'bucket',
+      valueType: 'text',
+      hideInSearch: true,
+    },
+    {
+      title: 'Region',
+      dataIndex: 'region',
+      key: 'region',
       valueType: 'text',
       hideInSearch: true,
     },
