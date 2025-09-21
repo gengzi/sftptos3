@@ -6,7 +6,9 @@ import com.gengzi.sftp.context.ServerSessionUserInfoContext;
 import com.gengzi.sftp.dao.S3Storage;
 import com.gengzi.sftp.dao.S3StorageRepository;
 import com.gengzi.sftp.dao.User;
+import com.gengzi.sftp.enums.AuthFailureReason;
 import com.gengzi.sftp.enums.StorageTypeEnum;
+import com.gengzi.sftp.monitor.service.SftpConnectionAuditService;
 import org.apache.sshd.server.session.ServerSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +25,12 @@ public class UserServerSession {
     @Autowired
     private S3StorageRepository storageRepository;
 
+
+    @Autowired
+    private SftpConnectionAuditService sftpConnectionAuditService;
+
     public boolean addUserInfoToServerSession(User userByUsername, ServerSession serverSession){
+        Long attributeId = serverSession.getAttribute(Constans.SERVERSESSION_DB_IDKEY);
         String accessStorageType = userByUsername.getAccessStorageType();
         String accessStorageInfo = userByUsername.getAccessStorageInfo();
         if(StorageTypeEnum.S3.type().equals(accessStorageType)){
@@ -47,6 +54,7 @@ public class UserServerSession {
                 return true;
             }else{
                 logger.error("s3Storage is empty");
+                sftpConnectionAuditService.authFailReasonEvent(attributeId,userByUsername.getUsername(), AuthFailureReason.SYS_NO_SUCH_USER.getReasonKey());
                 return false;
             }
         }

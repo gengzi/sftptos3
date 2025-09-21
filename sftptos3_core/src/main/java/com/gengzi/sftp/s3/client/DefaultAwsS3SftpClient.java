@@ -35,11 +35,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> {
 
     private static final char PATH_SEPARATOR_CHAR = Constants.PATH_SEPARATOR.charAt(0);
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger logger = LoggerFactory.getLogger(DefaultAwsS3SftpClient.class);
 
     public DefaultAwsS3SftpClient(S3SftpNioSpiConfiguration s3SftpNioSpiConfiguration) {
         super(s3SftpNioSpiConfiguration);
@@ -97,37 +98,20 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                         true
                 ));
             }).then().block();
-
+            logger.debug("dir HeadResponse objects:{},prefixes:{}",
+                    objects.entrySet().stream().map( m -> m.getKey()+":"+m.getValue().toString()).collect(Collectors.joining("\n")),
+                    prefixes.entrySet().stream().map( m -> m.getKey()+":"+m.getValue().toString()).collect(Collectors.joining("\n")));
             return new ObjectHeadResponse(
                     FileTime.fromMillis(0),
                     0L,
                     null,
                     true,
                     false,
-                    new ListObjectsResponse(prefixes, objects)
+                    new ListObjectsResponse(objects, prefixes)
             );
         } else {
             throw new NoSuchFileException("no such file,path:" + key);
         }
-    }
-
-    private static CompletableFuture<List<String>> listObjectsRecursively(
-            S3AsyncClient client, ListObjectsV2Request request, List<String> allFiles) {
-
-        return client.listObjectsV2(request)
-                .thenCompose(response -> {
-                    // 处理当前页文件
-                    allFiles.addAll(response.contents().stream().map(S3Object::key).toList());
-                    allFiles.addAll(response.commonPrefixes().stream().map(CommonPrefix::prefix).toList());
-                    // 若有更多结果，继续异步获取下一页
-                    if (response.isTruncated()) {
-                        ListObjectsV2Request nextRequest = request.toBuilder()
-                                .continuationToken(response.nextContinuationToken())
-                                .build();
-                        return listObjectsRecursively(client, nextRequest, allFiles);
-                    }
-                    return CompletableFuture.completedFuture(allFiles);
-                });
     }
 
     private static CompletableFuture<ListObjectsResponse> listObjectsRecursively(

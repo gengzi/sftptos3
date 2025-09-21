@@ -89,6 +89,12 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
     }
 
     public static ObjectHeadResponse execZeroObject(String key, ObjectHeadResponse objectHeadResponse) {
+        if(!objectHeadResponse.isDirectory()){
+            return objectHeadResponse;
+        }
+
+
+
         // 提取路径分隔符常量，避免重复调用
         String pathSeparator = Constants.PATH_SEPARATOR;
         // 处理目标key（确保以路径分隔符结尾）
@@ -179,6 +185,7 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
 
     private static void putChache(S3SftpPath path, ObjectHeadResponse objectHeadResponse) {
         // 处理目录，如果当前路径是一个目录
+        String pathKey = path.getKey();
         if (objectHeadResponse != null && objectHeadResponse.isDirectory() && objectHeadResponse.getListObjects() != null) {
             DirectoryContentsNamesCacheUtil.putCacheValue(path.getFileSystem(), path.getKey(), objectHeadResponse.getListObjects().getObjectsNames());
 
@@ -190,8 +197,13 @@ public class S3SftpBasicFileAttributes implements BasicFileAttributes {
                     UserPathFileAttributesCacheUtil.putCacheValue(path.getFileSystem(), key, value);
                 }
             }
+            String directoryKey = pathKey.endsWith(Constants.PATH_SEPARATOR) ? pathKey : pathKey + Constants.PATH_SEPARATOR;
             if (listObjects.getObjects() != null && !listObjects.getObjects().isEmpty()) {
-                for (Map.Entry<String, ObjectHeadResponse> entry : listObjects.getObjects().entrySet()) {
+                    for (Map.Entry<String, ObjectHeadResponse> entry : listObjects.getObjects().entrySet()) {
+                    logger.debug("put cache:{}, directoryKey:{}", entry.getKey(),directoryKey);
+                    if(directoryKey.equals(entry.getKey())){
+                        continue;
+                    }
                     String key = entry.getKey();
                     ObjectHeadResponse value = entry.getValue();
                     UserPathFileAttributesCacheUtil.putCacheValue(path.getFileSystem(), key, value);

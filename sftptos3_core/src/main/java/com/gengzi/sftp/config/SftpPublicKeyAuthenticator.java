@@ -1,8 +1,10 @@
 package com.gengzi.sftp.config;
 
-import com.gengzi.sftp.dao.S3StorageRepository;
+import com.gengzi.sftp.constans.Constans;
 import com.gengzi.sftp.dao.User;
 import com.gengzi.sftp.dao.UserRepository;
+import com.gengzi.sftp.enums.AuthFailureReason;
+import com.gengzi.sftp.monitor.service.SftpConnectionAuditService;
 import org.apache.sshd.common.config.keys.AuthorizedKeyEntry;
 import org.apache.sshd.common.config.keys.PublicKeyEntryResolver;
 import org.apache.sshd.server.auth.AsyncAuthException;
@@ -25,20 +27,23 @@ public class SftpPublicKeyAuthenticator implements PublickeyAuthenticator {
     private UserRepository userRepository;
 
     @Autowired
-    private S3StorageRepository storageRepository;
+    private UserServerSession userServerSession;
 
     @Autowired
-    private UserServerSession userServerSession;
+    private SftpConnectionAuditService sftpConnectionAuditService;
 
     @Override
     public boolean authenticate(String username, PublicKey publicKey, ServerSession serverSession) throws AsyncAuthException {
+        Long attributeId = serverSession.getAttribute(Constans.SERVERSESSION_DB_IDKEY);
         User userByUsername = userRepository.findUserByUsername(username);
-        if(userByUsername == null){
+        if (userByUsername == null) {
+            sftpConnectionAuditService.authFailReasonEvent(attributeId,username,AuthFailureReason.SYS_NO_SUCH_USER.getReasonKey());
             return false;
         }
 
         String secretKey = userByUsername.getSecretKey();
-        if(secretKey == null || "".equals(secretKey)){
+        if (secretKey == null || "".equals(secretKey)) {
+            sftpConnectionAuditService.authFailReasonEvent(attributeId,username,AuthFailureReason.NOT_CONFIGURED_CLIENT_PUBLIC_KEY.getReasonKey());
             return false;
         }
 
@@ -47,7 +52,8 @@ public class SftpPublicKeyAuthenticator implements PublickeyAuthenticator {
         // 使用指定的解析器将 entry 转换为 PublicKey
         try {
             PublicKey userPublicKey = entry.resolvePublicKey(serverSession, PublicKeyEntryResolver.IGNORING);
-            if(!publicKey.equals(userPublicKey)){
+            if (!publicKey.equals(userPublicKey)) {
+                sftpConnectionAuditService.authFailReasonEvent(attributeId,username,AuthFailureReason.PUBLIC_KEY_FAILED_TO_MATCH.getReasonKey());
                 return false;
             }
         } catch (IOException e) {
@@ -55,7 +61,7 @@ public class SftpPublicKeyAuthenticator implements PublickeyAuthenticator {
         } catch (GeneralSecurityException e) {
             throw new RuntimeException(e);
         }
-       return userServerSession.addUserInfoToServerSession(userByUsername,serverSession);
+        return userServerSession.addUserInfoToServerSession(userByUsername, serverSession);
     }
 
 }

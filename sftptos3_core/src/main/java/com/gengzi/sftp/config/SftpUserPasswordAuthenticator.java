@@ -6,7 +6,9 @@ import com.gengzi.sftp.dao.S3Storage;
 import com.gengzi.sftp.dao.S3StorageRepository;
 import com.gengzi.sftp.dao.User;
 import com.gengzi.sftp.dao.UserRepository;
+import com.gengzi.sftp.enums.AuthFailureReason;
 import com.gengzi.sftp.enums.StorageTypeEnum;
+import com.gengzi.sftp.monitor.service.SftpConnectionAuditService;
 import com.gengzi.sftp.util.PasswordEncoderUtil;
 import org.apache.sshd.server.auth.AsyncAuthException;
 import org.apache.sshd.server.auth.password.PasswordAuthenticator;
@@ -32,13 +34,19 @@ public class SftpUserPasswordAuthenticator implements PasswordAuthenticator {
     @Autowired
     private UserServerSession userServerSession;
 
+    @Autowired
+    private SftpConnectionAuditService sftpConnectionAuditService;
+
     @Override
     public boolean authenticate(String username, String password, ServerSession serverSession) throws PasswordChangeRequiredException, AsyncAuthException {
+        Long attributeId = serverSession.getAttribute(Constans.SERVERSESSION_DB_IDKEY);
         User userByUsername = userRepository.findUserByUsername(username);
         if(userByUsername == null){
+            sftpConnectionAuditService.authFailReasonEvent(attributeId,username, AuthFailureReason.SYS_NO_SUCH_USER.getReasonKey());
             return false;
         }
         if(!PasswordEncoderUtil.matchesPassword(password, userByUsername.getPasswd())){
+            sftpConnectionAuditService.authFailReasonEvent(attributeId,username, AuthFailureReason.SYS_NO_SUCH_USER.getReasonKey());
             return false;
         }
        return userServerSession.addUserInfoToServerSession(userByUsername,serverSession);

@@ -111,8 +111,13 @@ public class S3SftpDirectoryStream implements DirectoryStream {
         if (entries == null || entries.isEmpty()) {
             return;
         }
-        entries.forEach((key, value) ->
-                UserPathFileAttributesCacheUtil.putCacheValue(fileSystem, key, value)
+        entries.forEach((key, value) -> {
+                    if (key.equals(path)) {
+                        return;
+                    }
+                    UserPathFileAttributesCacheUtil.putCacheValue(fileSystem, key, value);
+                }
+
         );
     }
 

@@ -25,9 +25,11 @@ public class UserPathFileAttributesCacheUtil {
     public static ObjectHeadResponse getCacheValue(S3SftpPath s3SftpPath) {
         try {
             String cacheKey = getCacheKey(s3SftpPath);
-            return (ObjectHeadResponse) cacheManager.getUserPathFileAttributesCache().getIfPresent(cacheKey);
+            ObjectHeadResponse objectHeadResponse = (ObjectHeadResponse) cacheManager.getUserPathFileAttributesCache().getIfPresent(cacheKey);
+            logger.debug("UserPathFileAttributesCache getCacheValue cacheKey:{},value:{}", cacheKey, objectHeadResponse == null ? "null" :objectHeadResponse.toString());
+            return objectHeadResponse;
         } catch (Exception e) {
-            logger.error("UserPathFileAttributesCache getCacheValue error !!!");
+            logger.error("UserPathFileAttributesCache getCacheValue error !!! message:{}",e.getMessage());
         }
         return null;
     }
@@ -49,6 +51,7 @@ public class UserPathFileAttributesCacheUtil {
         try {
             String cacheKey = getCacheKey(s3SftpPath);
             cacheManager.getUserPathFileAttributesCache().put(cacheKey, value);
+            logger.debug("UserPathFileAttributesCache putCacheValue cacheKey:{},value:{}", cacheKey, value == null ? "null" :value.toString());
         } catch (Exception e) {
             logger.error("UserPathFileAttributesCache putCacheValue error !!!");
         }
@@ -59,6 +62,7 @@ public class UserPathFileAttributesCacheUtil {
         try {
             String cacheKey = getCacheKey(s3SftpFileSystem, s3SftpPath);
             cacheManager.getUserPathFileAttributesCache().put(cacheKey, value);
+            logger.debug("UserPathFileAttributesCache2 putCacheValue cacheKey:{},value:{}", cacheKey,value == null ? "null" :value.toString());
         } catch (Exception e) {
             logger.error("UserPathFileAttributesCache putCacheValue error !!!");
         }

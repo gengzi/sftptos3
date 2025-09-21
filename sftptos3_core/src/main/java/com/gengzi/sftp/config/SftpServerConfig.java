@@ -4,12 +4,12 @@ package com.gengzi.sftp.config;
 import com.gengzi.sftp.factory.DynamicVirtualFileSystemFactory;
 import com.gengzi.sftp.listener.FileWriteListener;
 import com.gengzi.sftp.listener.SftptoS3SftpEventListener;
+import com.gengzi.sftp.monitor.listener.SftpSessionListener;
 import com.gengzi.sftp.util.ResourceUtils;
 import org.apache.sshd.common.keyprovider.FileKeyPairProvider;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.sftp.server.SftpSubsystemFactory;
 import org.apache.sshd.sftp.server.UnsupportedAttributePolicy;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -77,7 +77,6 @@ public class SftpServerConfig {
         server.setFileSystemFactory(new DynamicVirtualFileSystemFactory());
         // 设置session监听器
         server.addSessionListener(sftpSessionListener);
-
         server.start();
         return server;
     }

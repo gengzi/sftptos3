@@ -105,4 +105,15 @@ public class ObjectHeadResponse {
     }
 
 
+    @Override
+    public String toString() {
+        return "ObjectHeadResponse{" +
+                "lastModifiedTime=" + lastModifiedTime +
+                ", size=" + size +
+                ", eTag=" + eTag +
+                ", isDirectory=" + isDirectory +
+                ", isRegularFile=" + isRegularFile +
+                ", listObjects=" + listObjects +
+                '}';
+    }
 }

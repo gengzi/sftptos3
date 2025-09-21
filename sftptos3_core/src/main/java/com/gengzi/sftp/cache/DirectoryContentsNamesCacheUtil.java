@@ -26,7 +26,9 @@ public class DirectoryContentsNamesCacheUtil {
     public static List<String> getCacheValue(S3SftpFileSystem sftpFileSystem, String path) {
         try {
             String cacheKey = getCacheKey(sftpFileSystem, path);
-            return (List<String>) cacheManager.getDirectoryContentsNamesCache().getIfPresent(cacheKey);
+            List<String> dirs = (List<String>) cacheManager.getDirectoryContentsNamesCache().getIfPresent(cacheKey);
+            logger.debug("DirectoryContentsNamesCache getCacheValue cacheKey:{},directories:{}", cacheKey, dirs.stream().collect(Collectors.joining("\n")));
+            return dirs;
         } catch (Exception e) {
             logger.error("DirectoryContentsNamesCache getCacheValue error !!!");
         }
@@ -67,7 +69,7 @@ public class DirectoryContentsNamesCacheUtil {
 
             String cacheKey = getCacheKey(sftpFileSystem, removePathKey);
             cacheManager.getDirectoryContentsNamesCache().invalidate(cacheKey);
-            logger.debug("DirectoryContentsNamesCache                 cacheKey:{}", cacheKey);
+            logger.debug("DirectoryContentsNamesCache removeCacheValue cacheKey:{}", cacheKey);
         } catch (Exception e) {
             logger.error("DirectoryContentsNamesCache removeCacheValue error !!!");
         }

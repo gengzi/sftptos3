@@ -4,12 +4,12 @@ spring:
     username: root  # 你的MySQL用户名
     password: 111  # 你的MySQL密码
     driver-class-name: com.mysql.cj.jdbc.Driver
-jpa:
-  show-sql: true  # 控制台打印SQL语句
-  properties:
-    hibernate:
-      format_sql: true  # 格式化SQL
-  database-platform: org.hibernate.dialect.MySQL8Dialect  # 指定MySQL方言
+  jpa:
+    show-sql: true  # 控制台打印SQL语句
+    properties:
+      hibernate:
+        format_sql: true  # 格式化SQL
+    database-platform: org.hibernate.dialect.MySQL8Dialect                # 指定MySQL方言
 
 
 ## sftp相关
@@ -33,7 +33,9 @@ s3:
 ## 日志相关
 logging:
   level:
-    com.gengzi.sftp: debug
+    com.gengzi.sftp.cache: debug
+    com.gengzi.sftp.s3.client: debug
+    com.gengzi.sftp.nio: debug
     org.apache.sshd.sftp.server: debug
   # 日志文件配置（可选）
   file:
