@@ -2,6 +2,8 @@ package com.gengzi.sftp.usermodel.controller;
 
 
 import com.gengzi.sftp.usermodel.dto.S3StorageRequest;
+import com.gengzi.sftp.usermodel.dto.S3StorageUpdateRequest;
+import com.gengzi.sftp.usermodel.dto.UserInfoUpdateRequest;
 import com.gengzi.sftp.usermodel.response.Result;
 import com.gengzi.sftp.usermodel.service.S3StorageService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -41,6 +43,22 @@ public class S3StorageController {
     public Result<?> list(@RequestParam(required = false) String s3Name,
                           @PageableDefault(page = 0, size = 10) Pageable pageable) {
         return Result.success(storageService.list(s3Name, pageable));
+    }
+
+
+    @PostMapping("/update")
+    @ResponseBody
+    public Result<?> update(@Valid @RequestBody S3StorageUpdateRequest s3StorageRequest) {
+        storageService.update(s3StorageRequest);
+        return Result.success(null);
+    }
+
+
+    @PostMapping("/remove")
+    @ResponseBody
+    public Result<?> remove(@Valid @RequestParam Long id) {
+        storageService.remove(id);
+        return Result.success(null);
     }
 
 

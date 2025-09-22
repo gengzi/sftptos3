@@ -71,7 +71,7 @@ public class AdminServiceImpl implements AdminService {
         if (user.isPresent()) {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             UserPrincipal details = (UserPrincipal) authentication.getPrincipal();
-            Admin updateUser = new Admin();
+            Admin updateUser = user.get();
             updateUser.setPasswd(PasswordEncoderUtil.encodePassword(adminInfoUpdateRequest.getPasswd()));
             updateUser.setUpdater(details.getId());
             updateUser.setUpdateTime(LocalDateTime.now());

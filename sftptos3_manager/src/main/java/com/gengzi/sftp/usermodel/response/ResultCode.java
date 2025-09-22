@@ -26,7 +26,8 @@ public enum ResultCode {
     ORDER_CANCELED(1003, "订单已取消"),
     CONFIG_EXIST(1004, "当前配置存在"),
     ADMIN_USER_PROHIBIT_DEL(1005, "admin管理员禁止删除"),
-    ;
+    CONFIG_NOT_EXIST(1006, "配置不存在"),
+    CONFIG_IN_USE(1007, "当前配置正在使用中");
 
     private final Integer code;
     private final String message;
