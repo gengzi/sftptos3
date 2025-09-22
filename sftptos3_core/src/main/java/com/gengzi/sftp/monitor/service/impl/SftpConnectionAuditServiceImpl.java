@@ -5,10 +5,16 @@ import com.gengzi.sftp.dao.SftpConnectionAuditRepository;
 import com.gengzi.sftp.enums.AuthStatus;
 import com.gengzi.sftp.monitor.service.SftpConnectionAuditService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.criteria.Predicate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class SftpConnectionAuditServiceImpl implements SftpConnectionAuditService {
@@ -71,5 +77,31 @@ public class SftpConnectionAuditServiceImpl implements SftpConnectionAuditServic
     @Transactional(rollbackFor = Exception.class)
     public void sessionClosedEvent(Long id, String disconnectReason) {
         sftpConnectionAuditRepository.updateSessionClosedEventById(LocalDateTime.now(), disconnectReason, id);
+    }
+
+    /**
+     * 获取分页列表
+     *
+     * @param username
+     * @param pageable
+     * @return
+     */
+    @Override
+    public Page<SftpConnectionAudit> list(String username, Pageable pageable) {
+        Specification<SftpConnectionAudit> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            // 条件1：名称模糊匹配（如果name不为空）
+            if (username != null && !username.isEmpty()) {
+                predicates.add(cb.like(root.get("username"),  username + "%"));
+            }
+            // 添加排序条件
+            query.orderBy(cb.desc(root.get("createTime")));
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+
+        return sftpConnectionAuditRepository.findAll(spec,pageable);
+
     }
 }

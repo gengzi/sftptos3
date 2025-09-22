@@ -15,7 +15,7 @@ public enum AuthFailureReason {
     private String reasonKey;
     private String reason;
 
-    AuthFailureReason(String reason, String reasonKey) {
+    AuthFailureReason(String reasonKey, String reason) {
         this.reason = reason;
         this.reasonKey = reasonKey;
     }

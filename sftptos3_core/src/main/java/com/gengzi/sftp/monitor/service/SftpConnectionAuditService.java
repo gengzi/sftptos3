@@ -1,6 +1,8 @@
 package com.gengzi.sftp.monitor.service;
 
 import com.gengzi.sftp.dao.SftpConnectionAudit;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 /**
  * 审计sftp链接信息
@@ -42,5 +44,14 @@ public interface SftpConnectionAuditService {
      * @param disconnectReason 断开原因
      */
     void sessionClosedEvent(Long id, String disconnectReason);
+
+
+    /**
+     * 获取分页列表
+     * @param username
+     * @param pageable
+     * @return
+     */
+    Page<SftpConnectionAudit> list(String username, Pageable pageable);
 
 }
