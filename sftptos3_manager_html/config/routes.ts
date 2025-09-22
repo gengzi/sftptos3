@@ -11,46 +11,6 @@
  * @doc https://umijs.org/docs/guides/routes
  */
 export default [
-  // 用户管理菜单
-  {
-    path: '/userManagement',
-    name: 'userManagement',
-    icon: 'user',
-    access: 'canAdmin',
-    routes: [
-      {
-        path: '/userManagement',
-        redirect: '/userManagement/list',
-      },
-      {
-        name: 'list',
-        icon: 'smile',
-        path: '/userManagement/list',
-        component: './userManagement/list',
-      },
-    ],
-  },
-  
-  // 管理员菜单
-  {
-    path: '/adminManagement',
-    name: 'adminManagement',
-    icon: 'crown',
-    access: 'canAdmin',
-    routes: [
-      {
-        path: '/adminManagement',
-        redirect: '/adminManagement/list',
-      },
-      {
-        name: 'list',
-        icon: 'smile',
-        path: '/adminManagement/list',
-        component: './adminManagement/list',
-      },
-    ],
-  },
-  
   // 用户认证相关路由（不显示在菜单中）
   {
     path: '/user',
@@ -99,12 +59,30 @@ export default [
     component: './s3Management',
   },
   
+  // 用户管理菜单
+  {
+    path: '/userManagement',
+    name: 'userManagement',
+    icon: 'user',
+    access: 'canAdmin',
+    component: './userManagement/list',
+  },
+  
   // 服务监控
   {
     path: '/monitor',
     name: 'monitor',
     icon: 'monitor',
     component: './monitor',
+  },
+  
+  // 管理员菜单
+  {
+    path: '/adminManagement',
+    name: 'adminManagement',
+    icon: 'crown',
+    access: 'canAdmin',
+    component: './adminManagement/list',
   },
   
   // 404页面

@@ -68,7 +68,7 @@ const S3Management: React.FC = () => {
         s3Name: values.s3Name,
         endpoint: values.endpoint,
         accessKey: values.accessKey,
-        accessSecret: values.secretKey, // 将secretKey映射为accessSecret以匹配API要求
+        accessSecret: values.accessSecret, // 直接使用accessSecret字段
         bucket: values.bucket,
         region: values.region
       };
@@ -92,18 +92,19 @@ const S3Management: React.FC = () => {
   // 编辑S3配置
   const handleEditS3Config = async (values: any) => {
     try {
-      // 转换表单字段名以匹配API要求
+      // 转换表单字段名以匹配API要求并添加id
       const requestData = {
         s3Name: values.s3Name,
         endpoint: values.endpoint,
         accessKey: values.accessKey,
-        accessSecret: values.secretKey, // 将secretKey映射为accessSecret以匹配API要求
+        accessSecret: values.accessSecret, // 直接使用accessSecret字段
         bucket: values.bucket,
-        region: values.region
+        region: values.region,
+        id: currentConfig?.id // 添加id字段
       };
       
       if (currentConfig && currentConfig.id) {
-        const response = await updateS3Storage(currentConfig.id, requestData);
+        const response = await updateS3Storage(requestData);
         if (response.success) {
           message.success('编辑S3配置成功');
           setModalVisible(false);
@@ -133,6 +134,8 @@ const S3Management: React.FC = () => {
           actionRef.current.reload();
         }
       } else {
+        // 确保正确显示后端返回的错误信息
+        // 特别是当code为1007且message为"当前配置正在使用中"的情况
         message.error(response.message || '删除S3配置失败');
       }
     } catch (error) {

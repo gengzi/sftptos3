@@ -1,5 +1,5 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { Form, Input, Select, Button, Space } from 'antd';
+import { Form, Input, Select, Button, Space, Alert } from 'antd';
 import type { RuleObject } from 'antd/es/form';
 import { getS3Names } from '@/services/s3';
 
@@ -127,6 +127,15 @@ const UserForm = forwardRef(({ initialValues, onFinish, onCancel, formIdPrefix =
         }
       }}
     >
+      {initialValues && (
+        <Alert
+          message="配置生效说明"
+          description="更新的配置信息需用户重新连接SFTP服务才会生效，存量正在连接的用户将继续按照既往配置运行。"
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
       <Form.Item
         name="username"
         label="用户名"
@@ -174,6 +183,7 @@ const UserForm = forwardRef(({ initialValues, onFinish, onCancel, formIdPrefix =
             message: '请输入用户根目录',
           },
         ]}
+         tooltip="请使用对应操作系统的路径格式，s3存储根目录为空可以设置为 / ,如果存在真实根目录可以设置 dir/dir1/ 即可"
       >
         <Input placeholder="请输入用户根目录路径" id={`${formIdPrefix}-userRootPath`} />
       </Form.Item>

@@ -39,6 +39,7 @@ export const errorConfig: RequestConfig = {
       
       // 处理网络错误和请求错误
       if (error.response) {
+        const { status, data } = error.response;
         // Axios 的错误 - 请求成功发出且服务器也响应了状态码
         console.log('Error response status:', error.response.status);
         
@@ -66,6 +67,13 @@ export const errorConfig: RequestConfig = {
             console.error('Error during 401/403 error handling:', handlerError);
           }
         } else {
+                  // 2. 处理业务逻辑错误（后端返回的success: false）
+        if (data && typeof data === 'object' && data.success === false) {
+          // 优先显示后端返回的message
+          message.error(data.message || `操作失败（错误码：${data.code || status}）`);
+          return;
+        }
+
           message.error(`网络请求错误: ${error.response.status}`);
         }
       } else if (error.request) {
@@ -73,7 +81,7 @@ export const errorConfig: RequestConfig = {
         message.error('服务器无响应，请重试');
       } else {
         // 发送请求时出了点问题
-        message.error('请求错误，请重试');
+        // message.error('请求错误，请重试');
       }
     },
   },

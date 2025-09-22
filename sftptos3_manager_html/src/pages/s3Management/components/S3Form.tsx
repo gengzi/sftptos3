@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Form, Input, Button, Space } from 'antd';
+import { Modal, Form, Input, Button, Space, Alert } from 'antd';
 
 interface S3FormProps {
   visible: boolean;
@@ -40,17 +40,29 @@ const S3Form: React.FC<S3FormProps> = ({
       width={600}
     >
       <Form
-        form={form}
-        onFinish={handleFinish}
-        labelCol={{ span: 6 }}
-        wrapperCol={{ span: 16 }}
-      >
+          form={form}
+          onFinish={handleFinish}
+          labelCol={{ span: 6 }}
+          wrapperCol={{ span: 16 }}
+        >
+          {initialValues && (
+            <Alert
+              message="配置生效说明"
+              description="更新的配置信息需用户重新连接SFTP服务才会生效，存量正在连接的用户将继续按照既往配置运行。"
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
         <Form.Item
           label="名称标识"
           name="s3Name"
           rules={[{ required: true, message: '请输入名称标识!' }]}
         >
-          <Input placeholder="请输入S3存储的名称标识" />
+          <Input 
+            placeholder="请输入S3存储的名称标识" 
+            disabled={!!initialValues} 
+          />
         </Form.Item>
 
         <Form.Item
@@ -71,7 +83,7 @@ const S3Form: React.FC<S3FormProps> = ({
 
         <Form.Item
           label="密码"
-          name="secretKey"
+          name="accessSecret"
           rules={[{ required: true, message: '请输入密码!' }]}
         >
           <Input.Password placeholder="请输入秘密访问密钥" />

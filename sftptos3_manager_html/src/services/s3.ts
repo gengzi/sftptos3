@@ -73,10 +73,10 @@ export async function queryS3Storages(params?: { s3Name?: string; page?: number;
 }
 
 // 更新S3存储配置
-export async function updateS3Storage(id: string, params: S3Config) {
+export async function updateS3Storage(params: S3Config) {
   try {
-    const response = await request(`/s3/storage/update/${id}`, {
-      method: 'PUT',
+    const response = await request('/s3/storage/update', {
+      method: 'POST',
       data: params,
     });
     
@@ -104,10 +104,14 @@ export async function updateS3Storage(id: string, params: S3Config) {
 // 删除S3存储配置
 export async function deleteS3Storage(id: string) {
   try {
-    const response = await request(`/s3/storage/delete/${id}`, {
-      method: 'DELETE',
+    const response = await request('/s3/storage/remove', {
+      method: 'POST',
+      params: {
+        id,
+      },
+      data: '',
     });
-    
+    console.log('删除S3存储配置响应:', response);
     // 处理响应格式
     if (response && (response.success || response.code === 200)) {
       return {
@@ -115,16 +119,20 @@ export async function deleteS3Storage(id: string) {
         data: response,
       };
     } else {
+      // 确保正确传递后端返回的错误信息
+      // 特别是code为1007且message为"当前配置正在使用中"的情况
       return {
         success: false,
         message: response.message || '删除S3存储配置失败',
+        code: response.code,
       };
     }
   } catch (error) {
-    console.error('删除S3存储配置失败:', error);
+    console.error( error);
     return {
       success: false,
-      message: '删除S3存储配置失败',
+      message: error.message || '删除S3存储配置失败',
+      code: error.code,
     };
   }
 }
