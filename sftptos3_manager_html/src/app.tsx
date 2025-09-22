@@ -5,9 +5,8 @@ import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history, Link } from '@umijs/max';
 import React from 'react';
 import {
-  AvatarDropdown,
-  AvatarName,
   Footer,
+  LogoutButton,
   Question,
   SelectLang,
 } from '@/components';
@@ -76,14 +75,10 @@ export const layout: RunTimeLayoutConfig = ({
     actionsRender: () => [
       <Question key="doc" />,
       <SelectLang key="SelectLang" />,
+      <LogoutButton key="logout" />,
     ],
-    avatarProps: {
-      src: initialState?.currentUser?.avatar,
-      title: <AvatarName />,
-      render: (_, avatarChildren) => {
-        return <AvatarDropdown>{avatarChildren}</AvatarDropdown>;
-      },
-    },
+    // 移除avatarProps，因为我们不再需要头像组件
+
     waterMarkProps: {
       content: initialState?.currentUser?.name,
     },

@@ -188,7 +188,6 @@ const AdminListPage: React.FC = () => {
             type="link" 
             icon={<EditOutlined />} 
             onClick={() => showEditModal(record)}
-            disabled={record.username === 'admin'} // 系统默认管理员不可编辑
           >
             编辑
           </Button>
