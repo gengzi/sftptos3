@@ -25,22 +25,49 @@ interface ResponseStructure {
  */
 export const errorConfig: RequestConfig = {
   // 错误处理： umi@3 的错误处理方案。
+
   errorConfig: {
-    // 禁用错误抛出，让业务代码自己处理错误
-    errorThrower: () => {
-      // 不抛出错误，让业务代码自己处理
+    // 错误抛出，让业务代码能捕获到原始错误
+    errorThrower: (error) => {
+      console.log('ErrorThrower called with error:', error);
+      throw error;
     },
     // 错误接收及处理
     errorHandler: (error: any, opts: any) => {
+      console.log('ErrorHandler called with error:', error);
       if (opts?.skipErrorHandler) throw error;
-      // 只处理网络错误和请求错误，不处理业务逻辑错误
-      if (error.name === 'BizError') {
-        // 不在这里显示业务错误信息，让业务代码自己处理
-        return;
-      } else if (error.response) {
-        // Axios 的错误
-        // 请求成功发出且服务器也响应了状态码，但状态代码超出了 2xx 的范围
-        message.error(`网络请求错误: ${error.response.status}`);
+      
+      // 处理网络错误和请求错误
+      if (error.response) {
+        // Axios 的错误 - 请求成功发出且服务器也响应了状态码
+        console.log('Error response status:', error.response.status);
+        
+        // 专门处理401/403错误，确保能重定向到登录页
+        if (error.response.status === 401 || error.response.status === 403) {
+          console.log('Processing 401/403 error in errorHandler, clearing auth data and redirecting');
+          
+          try {
+            // 清除存储的用户信息和认证数据
+            localStorage.removeItem('userInfo');
+            localStorage.removeItem('token');
+            localStorage.removeItem('token_type');
+            
+            console.log('Auth data cleared successfully');
+            
+            // 显示错误提示
+            message.error('登录已过期或权限不足，请重新登录');
+            
+            // 延迟重定向，确保用户看到错误提示
+            setTimeout(() => {
+              console.log('Redirecting to login page after 1000ms delay');
+              window.location.href = '/user/login';
+            }, 1000);
+          } catch (handlerError) {
+            console.error('Error during 401/403 error handling:', handlerError);
+          }
+        } else {
+          message.error(`网络请求错误: ${error.response.status}`);
+        }
       } else if (error.request) {
         // 请求已经成功发起，但没有收到响应
         message.error('服务器无响应，请重试');
@@ -54,9 +81,12 @@ export const errorConfig: RequestConfig = {
   // 请求拦截器
   requestInterceptors: [
     (config: RequestOptions) => {
+      console.log('Request Interceptor - URL:', config.url);
       // 从 localStorage 获取 token 信息
       const token = localStorage.getItem('token');
       const tokenType = localStorage.getItem('token_type');
+      
+      console.log('Token available:', !!token, 'Token type available:', !!tokenType);
       
       // 拦截请求配置，添加认证信息
       if (token && tokenType) {
@@ -66,6 +96,7 @@ export const errorConfig: RequestConfig = {
           Authorization: `${tokenType} ${token}`,
         };
         
+        console.log('Authorization header added:', `${tokenType} ${token.substring(0, 10)}...`);
         return { ...config, headers };
       }
       
@@ -73,22 +104,13 @@ export const errorConfig: RequestConfig = {
     },
   ],
 
-  // 响应拦截器
+  // 响应拦截器 - 处理成功响应
   responseInterceptors: [
     (response) => {
       // 拦截响应数据，进行个性化处理
-      const { data, status } = response;
+      const { data, status, config } = response;
+      console.log('Response Interceptor - URL:', config?.url, 'Status:', status);
 
-      // 处理 401 未授权错误
-      if (status === 401) {
-        // 清除存储的用户信息
-        localStorage.removeItem('userInfo');
-        // 重定向到登录页面
-        window.location.href = '/user/login';
-      }
-
-      // 不在这里处理业务错误，让业务代码自己处理
-      
       return response;
     },
   ],

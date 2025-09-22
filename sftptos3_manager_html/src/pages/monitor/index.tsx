@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   Table,
@@ -46,19 +46,42 @@ import {
 } from '@ant-design/icons';
 import { Line, Column } from '@ant-design/plots';
 import type { ColumnsType } from 'antd/es/table';
+import { request } from '@umijs/max';
+
+// 时间格式化函数
+const formatTime = (timeString: string | null): string => {
+  if (!timeString) return '-';
+  try {
+    const date = new Date(timeString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  } catch (error) {
+    return timeString;
+  }
+};
 
 const { Text, Paragraph } = Typography;
 const { Option } = Select;
 const { Item } = Form;
 
 // 类型定义
-interface Client {  
-  id: string;
-  ip: string;
-  port: string;
+interface Client {
+  id: number;
+  sessionId: string;
   username: string;
-  connectedTime: string;
-  status: 'active' | 'idle';
+  clientIp: string;
+  clientPort: number;
+  connectTime: string;
+  disconnectTime: string | null;
+  authStatus: number;
+  authFailureReason: string | null;
+  disconnectReason: string | null;
+  createTime: string;
 }
 
 interface ServerResource {
@@ -97,35 +120,19 @@ const MonitorPage: React.FC = () => {
   const [trafficData, setTrafficData] = useState<TrafficData[]>([]);
   const [fileOperations, setFileOperations] = useState<FileOperation[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [selectedFtpServer, setSelectedFtpServer] = useState<string>('all');
   const [timeRange, setTimeRange] = useState<string>('24h');
   // 添加表单状态
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const [form] = Form.useForm();
-
-  // 生成模拟客户端数据
-  const generateClientData = (): Client[] => {
-    const statuses: ('active' | 'idle')[] = ['active', 'idle'];
-    const clients: Client[] = [];
-    
-    for (let i = 1; i <= 8; i++) {
-      const status = statuses[Math.floor(Math.random() * statuses.length)];
-      const hour = Math.floor(Math.random() * 24).toString().padStart(2, '0');
-      const minute = Math.floor(Math.random() * 60).toString().padStart(2, '0');
-      const second = Math.floor(Math.random() * 60).toString().padStart(2, '0');
-      
-      clients.push({
-        id: `client-${i}`,
-        ip: `192.168.1.${Math.floor(Math.random() * 255)}`,
-        port: `${Math.floor(Math.random() * 5000) + 1000}`,
-        username: `user${i}`,
-        connectedTime: `2023-10-20 ${hour}:${minute}:${second}`,
-        status
-      });
-    }
-    
-    return clients;
-  };
+  // 存储服务地址
+  const [serviceAddress, setServiceAddress] = useState<string>('');
+  // 存储用户名查询条件
+  const [usernameFilter, setUsernameFilter] = useState<string>('');
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+  // 总记录数状态
+  const [totalClients, setTotalClients] = useState<number>(0);
 
   // 生成模拟服务器资源数据
   const generateServerResourceData = (): ServerResource => {
@@ -195,25 +202,111 @@ const MonitorPage: React.FC = () => {
     return operations;
   };
 
-  // 初始化数据
-  useEffect(() => {
-    fetchData();
-    // 设置定时刷新
-    const interval = setInterval(fetchData, 30000); // 每30秒刷新一次
-    return () => clearInterval(interval);
-  }, [timeRange, selectedFtpServer]);
-
-  // 获取数据
-  const fetchData = () => {
+  // 修改fetchData函数，使用参数而不是依赖currentPage和pageSize
+  const fetchData = useCallback(async (pageNum?: number, pageSizeNum?: number) => {
     setLoading(true);
-    setTimeout(() => {
-      setClients(generateClientData());
+    try {
+      // 如果有保存的服务地址，则调用实际API
+      if (serviceAddress) {
+        const apiUrl = `${serviceAddress}/api/audit/list`;
+        const params: any = {
+          page: (pageNum || currentPage) - 1, // API使用0-based页码
+          size: pageSizeNum || pageSize,
+          sort: 'createTime,desc'
+        };
+        
+        // 如果用户名查询条件不为空，则添加到params中
+        if (usernameFilter) {
+          params.username = usernameFilter;
+        }
+        
+        // 调用API获取客户端列表数据
+        const response = await request<any>(apiUrl, {
+          method: 'GET',
+          params: params,
+        });
+        
+        // 调试日志，帮助排查API返回格式问题
+        console.log('API返回数据:', response);
+        
+        // 尝试从不同可能的路径获取数据
+        let clientData = [];
+        let total = 0;
+        
+        // 提取数据列表
+        if (response && response.data && response.data.content) {
+          clientData = response.data.content;
+          // 提取总记录数
+          total = response.data.totalElements || 0;
+        } else if (response && response.content) {
+          clientData = response.content;
+          // 提取总记录数
+          total = response.totalElements || 0;
+        } else if (Array.isArray(response)) {
+          clientData = response;
+          total = response.length;
+        }
+        
+        setClients(clientData);
+        setTotalClients(total);
+      } else {
+        // 如果没有服务地址，设置为空数组
+        setClients([]);
+        setTotalClients(0);
+      }
+      
+      // 其他数据仍然使用模拟数据
       setServerResources(generateServerResourceData());
       setTrafficData(generateTrafficData());
       setFileOperations(generateFileOperationData());
+    } catch (error) {
+      console.error('获取客户端列表失败:', error);
+      // 发生错误时保留现有数据，而不是清空
+      // 只更新其他模拟数据
+      setServerResources(generateServerResourceData());
+      setTrafficData(generateTrafficData());
+      setFileOperations(generateFileOperationData());
+    } finally {
       setLoading(false);
-    }, 800);
+    }
+  }, [serviceAddress, usernameFilter]);
+
+  // 初始化数据
+  useEffect(() => {
+    // 从本地存储读取SFTP监控地址
+    const savedAddress = localStorage.getItem('sftpMonitorAddress');
+    if (savedAddress) {
+      setServiceAddress(savedAddress);
+    }
+  }, []); // 只在组件挂载时执行一次
+
+  // 单独设置定时器，确保能获取到最新的fetchData函数
+  useEffect(() => {
+    // 设置定时刷新
+    const interval = setInterval(() => {
+      fetchData();
+    }, 30000); // 每30秒刷新一次
+    return () => clearInterval(interval);
+  }, [fetchData]); // 依赖fetchData，但包装在箭头函数中避免无限循环
+
+  // 当serviceAddress变化时，立即加载数据
+  useEffect(() => {
+    if (serviceAddress) {
+      fetchData();
+    }
+  }, [serviceAddress]); // 移除fetchData依赖
+
+  // 搜索函数 - 只有点击查询按钮时才调用
+  const handleSearch = () => {
+    fetchData();
   };
+
+  // 处理用户名输入变化
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUsernameFilter(e.target.value);
+  };
+
+
 
   // 显示添加SFTP模态框
   const showModal = () => {
@@ -224,7 +317,10 @@ const MonitorPage: React.FC = () => {
   const handleSubmit = () => {
     form.validateFields().then(values => {
       console.log('添加SFTP监控地址:', values);
-      // 这里可以添加实际的API调用逻辑
+      // 保存服务地址到状态
+      setServiceAddress(values.serviceAddress);
+      // 缓存到本地存储
+      localStorage.setItem('sftpMonitorAddress', values.serviceAddress);
       setIsModalVisible(false);
       form.resetFields();
       // 刷新数据
@@ -238,15 +334,15 @@ const MonitorPage: React.FC = () => {
   const clientColumns: ColumnsType<Client> = [
     {
       title: 'IP地址',
-      dataIndex: 'ip',
-      key: 'ip',
+      dataIndex: 'clientIp',
+      key: 'clientIp',
       width: 120,
       render: (text: string) => <Text strong>{text}</Text>
     },
     {
       title: '端口',
-      dataIndex: 'port',
-      key: 'port',
+      dataIndex: 'clientPort',
+      key: 'clientPort',
       width: 80
     },
     {
@@ -256,21 +352,52 @@ const MonitorPage: React.FC = () => {
       width: 100
     },
     {
-      title: '连接时间',
-      dataIndex: 'connectedTime',
-      key: 'connectedTime'
-    },
+        title: '连接时间',
+        dataIndex: 'connectTime',
+        key: 'connectTime',
+        width: 160,
+        render: (time: string) => formatTime(time)
+      },
+      {
+        title: '断开时间',
+        dataIndex: 'disconnectTime',
+        key: 'disconnectTime',
+        width: 160,
+        render: (time: string | null) => formatTime(time)
+      },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: '认证状态',
+      dataIndex: 'authStatus',
+      key: 'authStatus',
       width: 80,
-      render: (status: string) => (
-        <Tag color={status === 'active' ? 'green' : 'orange'}>
-          {status === 'active' ? '活跃' : '空闲'}
+      render: (status: number) => (
+        <Tag color={status === 1 ? 'green' : 'red'}>
+          {status === 1 ? '成功' : '失败'}
         </Tag>
       )
-    }
+    },
+    {
+      title: '认证失败原因',
+      dataIndex: 'authFailureReason',
+      key: 'authFailureReason',
+      width: 150,
+      ellipsis: true,
+      tooltip: (text: string) => text,
+      render: (text: string | null) => text || '-'
+    },
+    {
+      title: '断开原因',
+      dataIndex: 'disconnectReason',
+      key: 'disconnectReason',
+      width: 120
+    },
+    {
+        title: '创建时间',
+        dataIndex: 'createTime',
+        key: 'createTime',
+        width: 160,
+        render: (time: string) => formatTime(time)
+      }
   ];
 
   // 文件操作表格列定义
@@ -380,41 +507,36 @@ const MonitorPage: React.FC = () => {
 
       {/* 操作按钮 */}
       <div className="flex justify-end items-center mb-6">
-        <Space>
-          <Select 
-            value={selectedFtpServer} 
-            style={{ width: 120 }} 
-            onChange={setSelectedFtpServer}
-          >
-            <Option value="all">所有服务器</Option>
-            <Option value="sftp1">SFTP服务器1</Option>
-            <Option value="sftp2">SFTP服务器2</Option>
-            <Option value="sftp3">SFTP服务器3</Option>
-          </Select>
-          <Button type="primary" icon={<PlusOutlined />} onClick={showModal}>
-            添加SFTP
-          </Button>
-        </Space>
+        <Button type="primary" icon={<PlusOutlined />} onClick={showModal}>
+          添加SFTP
+        </Button>
       </div>
 
-      {/* 主内容区域 */}
+      {/* 主内容区域 - 上下布局 */}
       <Row gutter={[24, 24]}>
         
-        {/* 左侧 - 客户端列表 */}
-        <Col xs={24} lg={8}>
+        {/* 上方 - 客户端列表，在所有屏幕尺寸下铺满宽度 */}
+        <Col xs={24}>
           <Card 
           style={{ marginTop: 10 }}
             title="正在连接的客户端列表" 
             size="small"
             extra={
               <Space size="small" style={{ marginLeft: 10 }}>
+                <Input
+                  placeholder="用户名"
+                  size="small"
+                  value={usernameFilter}
+                  onChange={handleUsernameChange}
+                  style={{ width: 120 }}
+                  allowClear
+                />
                 <Button 
                   size="small" 
                   icon={<ReloadOutlined />}
                   loading={loading} 
                   onClick={fetchData}
                 />
-                <Button size="small" icon={<FilterOutlined />} />
               </Space>
             }
           >
@@ -423,10 +545,22 @@ const MonitorPage: React.FC = () => {
               dataSource={clients}
               rowKey="id"
               pagination={{
-                pageSize: 10,
-                showSizeChanger: false,
+                current: currentPage,
+                pageSize: pageSize,
+                total: totalClients, // 设置总记录数
+                showSizeChanger: true,
                 showTotal: (total, range) => 
-                  `第 ${range[0]}-${range[1]} 条，共 ${total} 条`
+                  `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+                onChange: (page, size) => {
+                  setCurrentPage(page);
+                  setPageSize(size);
+                  fetchData(page, size); // 直接传入新的页码和页大小，避免通过状态读取
+                },
+                onShowSizeChange: (current, size) => {
+                  setPageSize(size);
+                  setCurrentPage(1); // 切换每页条数时重置为第一页
+                  fetchData(1, size); // 直接传入新的页码和页大小
+                }
               }}
               loading={loading}
               scroll={{ y: 'calc(100vh - 170px)' }}
@@ -435,8 +569,8 @@ const MonitorPage: React.FC = () => {
           </Card>
         </Col>
 
-        {/* 右侧 - 资源监控和流量统计 */}
-        <Col xs={24} lg={16}>
+        {/* 下方 - 资源监控和流量统计，在所有屏幕尺寸下铺满宽度 */}
+        <Col xs={24}>
           <div className="space-y-10">
             {/* 服务器资源监控 */}
             <Card 
@@ -591,47 +725,13 @@ const MonitorPage: React.FC = () => {
         <Form
           form={form}
           layout="vertical"
-          initialValues={{
-            port: 22,
-            enableMonitoring: true
-          }}
         >
           <Item
-            label="服务器名称"
-            name="serverName"
-            rules={[{ required: true, message: '请输入服务器名称' }]}
+            label="服务地址"
+            name="serviceAddress"
+            rules={[{ required: true, message: '请输入服务地址' }]}
           >
-            <Input placeholder="请输入服务器名称" />
-          </Item>
-          <Item
-            label="IP地址"
-            name="ipAddress"
-            rules={[{ required: true, message: '请输入IP地址' }]}
-          >
-            <Input placeholder="请输入IP地址" />
-          </Item>
-          <Item
-            label="端口号"
-            name="port"
-            rules={[{ required: true, message: '请输入端口号' }]}
-          >
-            <InputNumber min={1} max={65535} style={{ width: '100%' }} />
-          </Item>
-          <Item
-            label="用户名"
-            name="username"
-            rules={[{ required: true, message: '请输入用户名' }]}
-          >
-            <Input placeholder="请输入用户名" />
-          </Item>
-          <Item
-            label="备注信息"
-            name="remark"
-          >
-            <Input.TextArea rows={3} placeholder="请输入备注信息（可选）" />
-          </Item>
-          <Item name="enableMonitoring" valuePropName="checked">
-            <Checkbox defaultChecked>启用监控</Checkbox>
+            <Input placeholder="请输入SFTP服务地址，格式如：sftp://hostname:port" />
           </Item>
         </Form>
       </Modal>
