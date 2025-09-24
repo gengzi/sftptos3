@@ -7,7 +7,7 @@ import com.gengzi.sftp.dao.S3Storage;
 import com.gengzi.sftp.dao.S3StorageRepository;
 import com.gengzi.sftp.dao.User;
 import com.gengzi.sftp.enums.AuthFailureReason;
-import com.gengzi.sftp.enums.StorageTypeEnum;
+import com.gengzi.sftp.enums.StorageType;
 import com.gengzi.sftp.monitor.service.SftpConnectionAuditService;
 import org.apache.sshd.server.session.ServerSession;
 import org.slf4j.Logger;
@@ -33,7 +33,7 @@ public class UserServerSession {
         Long attributeId = serverSession.getAttribute(Constans.SERVERSESSION_DB_IDKEY);
         String accessStorageType = userByUsername.getAccessStorageType();
         String accessStorageInfo = userByUsername.getAccessStorageInfo();
-        if(StorageTypeEnum.S3.type().equals(accessStorageType)){
+        if(StorageType.S3.type().equals(accessStorageType)){
             // 获取s3的存储信息
             Optional<S3Storage> storageOptional = storageRepository.findById(Long.valueOf(accessStorageInfo));
             if(storageOptional.isPresent()){

@@ -1,7 +1,7 @@
 package com.gengzi.sftp.enums;
 
 
-public enum StorageTypeEnum {
+public enum StorageType {
 
     S3("s3"),
     LOCAL("local"),
@@ -9,7 +9,7 @@ public enum StorageTypeEnum {
 
     private String type;
 
-    StorageTypeEnum(String type) {
+    StorageType(String type) {
         this.type = type;
     }
 

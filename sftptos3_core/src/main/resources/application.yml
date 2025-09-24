@@ -16,6 +16,7 @@ spring:
 sftp:
   server:
     port: 2222
+    customerOptAuditRecord: true
 
 ## 对象存储相关
 s3:
@@ -33,9 +34,10 @@ s3:
 ## 日志相关
 logging:
   level:
-    com.gengzi.sftp.cache: debug
-    com.gengzi.sftp.s3.client: debug
-    com.gengzi.sftp.nio: debug
+#    com.gengzi.sftp.cache: debug
+#    com.gengzi.sftp.s3.client: debug
+#    com.gengzi.sftp.nio: debug
+    com.gengzi.sftp.listener: debug
     org.apache.sshd.sftp.server: debug
   # 日志文件配置（可选）
   file:
@@ -45,9 +47,12 @@ logging:
   logback:
     rollingpolicy:
       file-name-pattern: logs/sftp-core-server.%d{yyyy-MM-dd}.%i.log  # 滚动文件命名格式
-      max-file-size: 10MB  # 触发滚动的文件大小
+      max-file-size: 3MB  # 触发滚动的文件大小
       total-size-cap: 100MB  # 日志文件总大小上限
       max-history: 7
+
+  # 自定义 Logback 配置（关键：分离 error 日志）
+  config: classpath:logback-spring.xml  # 引入外部配置文件
 
 ## 服务相关
 server:

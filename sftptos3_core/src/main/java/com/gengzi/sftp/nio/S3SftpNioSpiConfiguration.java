@@ -166,4 +166,10 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
         String cacheKeyPrefixFormat = DIRECTORY_CONTENTS_NAMES_CACHE_KEY_PREFIX + "%s:%s/%s/%s";
         return String.format(cacheKeyPrefixFormat, username, getEndpoint(), bucketName, pathKey);
     }
+
+
+    public String getStroageInfo(){
+        String username = sessionContext().getUsername();
+        return String.format("%s:%s/%s",username, getEndpoint(), bucketName);
+    }
 }

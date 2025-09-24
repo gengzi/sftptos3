@@ -200,8 +200,6 @@ public class S3SftpSeekableByteChannel implements SeekableByteChannel {
      */
     @Override
     public SeekableByteChannel position(long newPosition) throws IOException {
-
-
         if (newPosition < 0) {
             throw new IllegalArgumentException("newPosition < 0");
         }
@@ -210,8 +208,10 @@ public class S3SftpSeekableByteChannel implements SeekableByteChannel {
             throw new ClosedChannelException();
         }
 
-        //TODO
-
+        // this is only valid to read channels
+//        if (readableByteChannel == null) {
+//            throw new NonReadableChannelException();
+//        }
 
         // 将通道位置设置为新位置
         synchronized (this) {

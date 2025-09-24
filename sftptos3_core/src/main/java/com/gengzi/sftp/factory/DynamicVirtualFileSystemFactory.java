@@ -2,7 +2,7 @@ package com.gengzi.sftp.factory;
 
 import com.gengzi.sftp.constans.Constans;
 import com.gengzi.sftp.context.ServerSessionUserInfoContext;
-import com.gengzi.sftp.enums.StorageTypeEnum;
+import com.gengzi.sftp.enums.StorageType;
 import com.gengzi.sftp.nio.S3SftpFileSystemProvider;
 import com.gengzi.sftp.nio.S3SftpNioSpiConfiguration;
 import com.gengzi.sftp.s3.client.S3ClientNameEnum;
@@ -29,12 +29,12 @@ public class DynamicVirtualFileSystemFactory implements FileSystemFactory {
         ServerSessionUserInfoContext serverSessionUserInfoContext =
                 sessionContext.getAttribute(Constans.SERVERSESSIONUSERINFOCONTEXT);
 
-        if (StorageTypeEnum.LOCAL.type().equals(serverSessionUserInfoContext.getAccessStorageType())) {
+        if (StorageType.LOCAL.type().equals(serverSessionUserInfoContext.getAccessStorageType())) {
            return virtualFileSystemFactory.getDefaultHomeDir();
 //            return NativeFileSystemFactory.INSTANCE.getUserHomeDir(sessionContext);
         }
 
-        if (StorageTypeEnum.S3.type().equals(serverSessionUserInfoContext.getAccessStorageType())) {
+        if (StorageType.S3.type().equals(serverSessionUserInfoContext.getAccessStorageType())) {
             return Paths.get(serverSessionUserInfoContext.getUserRootPath()).normalize().toAbsolutePath();
         }
         throw new IOException("不支持的存储类型");
@@ -55,7 +55,7 @@ public class DynamicVirtualFileSystemFactory implements FileSystemFactory {
         ServerSessionUserInfoContext serverSessionUserInfoContext =
                 sessionContext.getAttribute(Constans.SERVERSESSIONUSERINFOCONTEXT);
 
-        if (StorageTypeEnum.LOCAL.type().equals(serverSessionUserInfoContext.getAccessStorageType())) {
+        if (StorageType.LOCAL.type().equals(serverSessionUserInfoContext.getAccessStorageType())) {
             virtualFileSystemFactory.setDefaultHomeDir(Path.of(serverSessionUserInfoContext.getUserRootPath()));
             return virtualFileSystemFactory.createFileSystem(sessionContext);
 
@@ -63,7 +63,7 @@ public class DynamicVirtualFileSystemFactory implements FileSystemFactory {
 
         }
 
-        if (StorageTypeEnum.S3.type().equals(serverSessionUserInfoContext.getAccessStorageType())) {
+        if (StorageType.S3.type().equals(serverSessionUserInfoContext.getAccessStorageType())) {
             Map<String, Object> env = new HashMap<>();
             env.put("s3sftp.pathStyleAccess", true);
             env.put(S3SftpNioSpiConfiguration.USER_ROOT_PATH, serverSessionUserInfoContext.getUserRootPath());

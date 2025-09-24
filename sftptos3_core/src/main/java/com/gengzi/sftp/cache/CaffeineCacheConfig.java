@@ -2,6 +2,8 @@ package com.gengzi.sftp.cache;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
@@ -11,9 +13,10 @@ import java.util.concurrent.TimeUnit;
  */
 public class CaffeineCacheConfig {
 
+    private static final Logger logger = LoggerFactory.getLogger(CaffeineCacheConfig.class);
 
     private static final int DEFAULT_CACHE_SIZE = 100_000;
-    private static final Long EXPIRE_AFTER_WRITE_TIMEOUT = 300L;
+    private static final Long EXPIRE_AFTER_WRITE_TIMEOUT = 60L;
     private static final TimeUnit EXPIRE_AFTER_WRITE_TIME_UNIT = TimeUnit.SECONDS;
 
     /**
@@ -23,6 +26,9 @@ public class CaffeineCacheConfig {
      * @return
      */
     public static Cache<String, Object> getUserPathFileAttributesCache() {
+        logger.debug("Creating UserPathFileAttributesCache with max size: {}, expire after write: {} {}",
+                DEFAULT_CACHE_SIZE, EXPIRE_AFTER_WRITE_TIMEOUT, EXPIRE_AFTER_WRITE_TIME_UNIT);
+
         return Caffeine.newBuilder()
                 .maximumSize(DEFAULT_CACHE_SIZE)
                 .expireAfterWrite(EXPIRE_AFTER_WRITE_TIMEOUT, EXPIRE_AFTER_WRITE_TIME_UNIT)
@@ -37,6 +43,9 @@ public class CaffeineCacheConfig {
      * @return
      */
     public static Cache<String, Object> getDirectoryContentsNamesCache() {
+        logger.debug("Creating DirectoryContentsNamesCache with max size: {}, expire after write: {} {}",
+                DEFAULT_CACHE_SIZE, EXPIRE_AFTER_WRITE_TIMEOUT, EXPIRE_AFTER_WRITE_TIME_UNIT);
+
         return Caffeine.newBuilder()
                 .maximumSize(DEFAULT_CACHE_SIZE)
                 .expireAfterWrite(EXPIRE_AFTER_WRITE_TIMEOUT, EXPIRE_AFTER_WRITE_TIME_UNIT)

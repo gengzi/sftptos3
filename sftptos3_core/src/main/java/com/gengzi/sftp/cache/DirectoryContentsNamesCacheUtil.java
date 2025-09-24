@@ -27,10 +27,13 @@ public class DirectoryContentsNamesCacheUtil {
         try {
             String cacheKey = getCacheKey(sftpFileSystem, path);
             List<String> dirs = (List<String>) cacheManager.getDirectoryContentsNamesCache().getIfPresent(cacheKey);
-            logger.debug("DirectoryContentsNamesCache getCacheValue cacheKey:{},directories:{}", cacheKey, dirs.stream().collect(Collectors.joining("\n")));
+            if (logger.isTraceEnabled()) {
+                String directoriesStr = (dirs != null) ? dirs.stream().collect(Collectors.joining("\n")) : "null";
+                logger.trace("DirectoryContentsNamesCache getCacheValue cacheKey:{}, directories:{}", cacheKey, directoriesStr);
+            }
             return dirs;
         } catch (Exception e) {
-            logger.error("DirectoryContentsNamesCache getCacheValue error !!!");
+            logger.error("DirectoryContentsNamesCache getCacheValue error !!! exception:{}", e.getMessage(), e);
         }
         return null;
     }
@@ -38,6 +41,7 @@ public class DirectoryContentsNamesCacheUtil {
     private static String getCacheKey(S3SftpFileSystem sftpFileSystem, String path) {
         S3SftpNioSpiConfiguration configuration = sftpFileSystem.configuration();
         String cacheKey = configuration.getDirectoryContentsNamesCacheKey(path);
+        logger.debug("Generated cache key for path '{}': {}", path, cacheKey);
         return cacheKey;
     }
 
@@ -45,9 +49,12 @@ public class DirectoryContentsNamesCacheUtil {
         try {
             String cacheKey = getCacheKey(sftpFileSystem, path);
             cacheManager.getDirectoryContentsNamesCache().put(cacheKey, directories);
-            logger.debug("DirectoryContentsNamesCache putCacheValue cacheKey:{},directories:{}", cacheKey, directories.stream().collect(Collectors.joining("\n")));
+            if (logger.isDebugEnabled()) {
+                String directoriesStr = (directories != null) ? directories.stream().collect(Collectors.joining("\n")) : "null";
+                logger.debug("DirectoryContentsNamesCache putCacheValue cacheKey:{}, directories:{}", cacheKey, directoriesStr);
+            }
         } catch (Exception e) {
-            logger.error("DirectoryContentsNamesCache putCacheValue error !!!");
+            logger.error("DirectoryContentsNamesCache putCacheValue error !!! exception:{}", e.getMessage(), e);
         }
 
     }
@@ -65,13 +72,11 @@ public class DirectoryContentsNamesCacheUtil {
                     removePathKey = path.substring(0, path.lastIndexOf(Constants.PATH_SEPARATOR) + 1);
                 }
             }
-
-
             String cacheKey = getCacheKey(sftpFileSystem, removePathKey);
             cacheManager.getDirectoryContentsNamesCache().invalidate(cacheKey);
-            logger.debug("DirectoryContentsNamesCache removeCacheValue cacheKey:{}", cacheKey);
+            logger.debug("DirectoryContentsNamesCache removeCacheValue cacheKey:{}, original path:{}, processed path:{}", cacheKey, path, removePathKey);
         } catch (Exception e) {
-            logger.error("DirectoryContentsNamesCache removeCacheValue error !!!");
+            logger.error("DirectoryContentsNamesCache removeCacheValue error !!! exception:{}", e.getMessage(), e);
         }
 
     }

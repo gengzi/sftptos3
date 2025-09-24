@@ -3,8 +3,9 @@ package com.gengzi.sftp.config;
 
 import com.gengzi.sftp.factory.DynamicVirtualFileSystemFactory;
 import com.gengzi.sftp.listener.FileWriteListener;
+import com.gengzi.sftp.listener.SftpSessionListener;
 import com.gengzi.sftp.listener.SftptoS3SftpEventListener;
-import com.gengzi.sftp.monitor.listener.SftpSessionListener;
+import com.gengzi.sftp.sshd.AuditSftpSubsystemFactory;
 import com.gengzi.sftp.util.ResourceUtils;
 import org.apache.sshd.common.keyprovider.FileKeyPairProvider;
 import org.apache.sshd.server.SshServer;
@@ -44,6 +45,8 @@ public class SftpServerConfig {
 
     @Value("${sftp.server.port}")
     private int sftpPort;
+    @Value("${sftp.server.customerOptAuditRecord}")
+    private boolean customerOptAuditRecord;
     @Autowired
     private FileWriteListener fileWriteListener;
     @Autowired
@@ -63,9 +66,13 @@ public class SftpServerConfig {
         server.setPort(sftpPort);
         // 配置主机密钥
         server.setKeyPairProvider(fileKeyPairProvider);
-        SftpSubsystemFactory factory = new SftpSubsystemFactory();
+        SftpSubsystemFactory factory;
         // 设置监听器
-        factory.addSftpEventListener(sftpEventListener);
+        if (customerOptAuditRecord) {
+            factory = new AuditSftpSubsystemFactory();
+        } else {
+            factory = new SftpSubsystemFactory();
+        }
         // 设置不支持属性打印日志
         factory.setUnsupportedAttributePolicy(UnsupportedAttributePolicy.Warn);
         server.setSubsystemFactories(Collections.singletonList(factory));
