@@ -377,10 +377,9 @@
     },
     "payload": {
       "username": "admin",
-      "password": "ant.design",
+      "password": "sftptos3admin",
       "autoLogin": true,
       "type": "account"
     },
-    "types": "/** POST /api/login/account */\nexport type POST_API_LOGIN_ACCOUNT_QUERY = {\n  /** example:  123 */\n        token : string\n}\n  \n\nexport type POST_API_LOGIN_ACCOUNT_PAYLOAD = {\n  /** example: admin */\n        username: string;\n  /** example: ant.design */\n        password: string;\n  /** example: true */\n        autoLogin: boolean;\n  /** example: account */\n        type: string\n}\n  \n\nexport type POST_API_LOGIN_ACCOUNT_RES = {\n  /** example: ok */\n        status: string;\n  /** example: account */\n        type: string;\n  /** example: admin */\n        currentAuthority: string\n}\n  "
-  }
+    "types": "/** POST /api/login/account */\nexport type POST_API_LOGIN_ACCOUNT_QUERY = {\n  /** example:  123 */\n        token : string\n}\n  \n\nexport type POST_API_LOGIN_ACCOUNT_PAYLOAD = {\n  /** example: admin */\n        username: string;\n  /** example: sftptos3admin */\n        password: string;\n  /** example: true */\n        autoLogin: boolean;\n  /** example: account */\n        type: string\n}\n  \n\nexport type POST_API_LOGIN_ACCOUNT_RES = {\n  /** example: ok */\n        status: string;\n  /** example: account */\n        type: string;\n  /** example: admin */\n        currentAuthority: string\n}\n  "}
 }

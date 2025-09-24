@@ -1,4 +1,4 @@
-﻿// @ts-ignore
+// @ts-ignore
 import { startMock } from '@@/requestRecordMock';
 import { TestBrowser } from '@@/testBrowser';
 import { fireEvent, render } from '@testing-library/react';
@@ -71,7 +71,7 @@ describe('Login Page', () => {
     await rootContainer.findAllByText('Ant Design');
 
     const userNameInput = await rootContainer.findByPlaceholderText(
-      'Username: admin or user',
+      'Username: admin',
     );
 
     act(() => {
@@ -79,11 +79,11 @@ describe('Login Page', () => {
     });
 
     const passwordInput = await rootContainer.findByPlaceholderText(
-      'Password: ant.design',
+      'Password: sftptos3admin',
     );
 
     act(() => {
-      fireEvent.change(passwordInput, { target: { value: 'ant.design' } });
+      fireEvent.change(passwordInput, { target: { value: 'sftptos3admin' } });
     });
 
     await (await rootContainer.findByText('Login')).click();

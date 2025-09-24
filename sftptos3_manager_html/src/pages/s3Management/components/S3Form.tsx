@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, Form, Input, Button, Space, Alert } from 'antd';
+import { useIntl } from '@umijs/max';
 
 interface S3FormProps {
   visible: boolean;
@@ -15,6 +16,7 @@ const S3Form: React.FC<S3FormProps> = ({
   onCancel,
 }) => {
   const [form] = Form.useForm();
+  const intl = useIntl();
 
   React.useEffect(() => {
     if (visible) {
@@ -33,7 +35,7 @@ const S3Form: React.FC<S3FormProps> = ({
 
   return (
     <Modal
-      title={initialValues ? '编辑S3存储' : '添加S3存储'}
+      title={initialValues ? intl.formatMessage({ id: 'pages.s3Management.editModalTitle' }) : intl.formatMessage({ id: 'pages.s3Management.addModalTitle' })}
       open={visible}
       onCancel={onCancel}
       footer={null}
@@ -47,70 +49,70 @@ const S3Form: React.FC<S3FormProps> = ({
         >
           {initialValues && (
             <Alert
-              message="配置生效说明"
-              description="更新的配置信息需用户重新连接SFTP服务才会生效，存量正在连接的用户将继续按照既往配置运行。"
+              message={intl.formatMessage({ id: 'pages.s3Management.configEffectDescription' })}
+              description={intl.formatMessage({ id: 'pages.s3Management.configEffectDetails' })}
               type="info"
               showIcon
               style={{ marginBottom: 16 }}
             />
           )}
         <Form.Item
-          label="名称标识"
+          label={intl.formatMessage({ id: 'pages.s3Management.nameLabel' })}
           name="s3Name"
-          rules={[{ required: true, message: '请输入名称标识!' }]}
+          rules={[{ required: true, message: intl.formatMessage({ id: 'pages.s3Management.pleaseInputName' }) }]}
         >
           <Input 
-            placeholder="请输入S3存储的名称标识" 
+            placeholder={intl.formatMessage({ id: 'pages.s3Management.placeholderName' })}
             disabled={!!initialValues} 
           />
         </Form.Item>
 
         <Form.Item
-          label="请求地址"
+          label={intl.formatMessage({ id: 'pages.s3Management.endpointLabel' })}
           name="endpoint"
-          rules={[{ required: true, message: '请输入请求地址!' }]}
+          rules={[{ required: true, message: intl.formatMessage({ id: 'pages.s3Management.pleaseInputEndpoint' }) }]}
         >
-          <Input placeholder="请输入S3请求地址，例如：https://s3.amazonaws.com" />
+          <Input placeholder={intl.formatMessage({ id: 'pages.s3Management.placeholderEndpoint' })} />
         </Form.Item>
 
         <Form.Item
-          label="账户"
+          label={intl.formatMessage({ id: 'pages.s3Management.accessKeyLabel' })}
           name="accessKey"
-          rules={[{ required: true, message: '请输入账户!' }]}
+          rules={[{ required: true, message: intl.formatMessage({ id: 'pages.s3Management.pleaseInputAccessKey' }) }]}
         >
-          <Input placeholder="请输入访问密钥ID" />
+          <Input placeholder={intl.formatMessage({ id: 'pages.s3Management.placeholderAccessKey' })} />
         </Form.Item>
 
         <Form.Item
-          label="密码"
+          label={intl.formatMessage({ id: 'pages.s3Management.secretKeyLabel' })}
           name="accessSecret"
-          rules={[{ required: true, message: '请输入密码!' }]}
+          rules={[{ required: true, message: intl.formatMessage({ id: 'pages.s3Management.pleaseInputSecretKey' }) }]}
         >
-          <Input.Password placeholder="请输入秘密访问密钥" />
+          <Input.Password placeholder={intl.formatMessage({ id: 'pages.s3Management.placeholderSecretKey' })} />
         </Form.Item>
 
         <Form.Item
-          label="桶"
+          label={intl.formatMessage({ id: 'pages.s3Management.bucketLabel' })}
           name="bucket"
-          rules={[{ required: true, message: '请输入桶名称!' }]}
+          rules={[{ required: true, message: intl.formatMessage({ id: 'pages.s3Management.pleaseInputBucket' }) }]}
         >
-          <Input placeholder="请输入S3桶名称" />
+          <Input placeholder={intl.formatMessage({ id: 'pages.s3Management.placeholderBucket' })} />
         </Form.Item>
 
         <Form.Item
-          label="Region"
+          label={intl.formatMessage({ id: 'pages.s3Management.regionLabel' })}
           name="region"
-          tooltip="指定API请求的地区，例如: us-east-1"
+          tooltip={intl.formatMessage({ id: 'pages.s3Management.regionTooltip' })}
         >
-          <Input placeholder="请输入地区" />
+          <Input placeholder={intl.formatMessage({ id: 'pages.s3Management.placeholderRegion' })} />
         </Form.Item>
 
         <Form.Item wrapperCol={{ offset: 6, span: 16 }}>
           <Space>
             <Button type="primary" htmlType="submit">
-              {initialValues ? '更新' : '添加'}
+              {initialValues ? intl.formatMessage({ id: 'pages.s3Management.updateButtonText' }) : intl.formatMessage({ id: 'pages.s3Management.addButtonText' })}
             </Button>
-            <Button onClick={onCancel}>取消</Button>
+            <Button onClick={onCancel}>{intl.formatMessage({ id: 'pages.s3Management.cancelButtonText' })}</Button>
           </Space>
         </Form.Item>
       </Form>

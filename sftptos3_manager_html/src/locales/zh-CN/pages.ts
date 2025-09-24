@@ -3,12 +3,12 @@ export default {
     'sftp to s3 管理后台页面',
   'pages.login.accountLogin.tab': '账户密码登录',
   'pages.login.accountLogin.errorMessage':
-    '错误的用户名和密码(admin/ant.design)',
+    '错误的用户名和密码(admin/sftptos3admin)',
   'pages.login.failure': '登录失败，请重试！',
   'pages.login.success': '登录成功！',
-  'pages.login.username.placeholder': '用户名: admin or user',
+  'pages.login.username.placeholder': '管理员: admin',
   'pages.login.username.required': '用户名是必填项！',
-  'pages.login.password.placeholder': '密码: ant.design',
+  'pages.login.password.placeholder': '密码: sftptos3admin',
   'pages.login.password.required': '密码是必填项！',
   'pages.login.phoneLogin.tab': '手机号登录',
   'pages.login.phoneLogin.errorMessage': '验证码错误',
@@ -68,4 +68,52 @@ export default {
   'pages.searchTable.tenThousand': '万',
   'pages.searchTable.batchDeletion': '批量删除',
   'pages.searchTable.batchApproval': '批量审批',
+  
+  // S3管理页面
+  'pages.s3Management.pageTitle': 'S3存储管理',
+  'pages.s3Management.addButton': '添加S3存储',
+  'pages.s3Management.editButton': '编辑',
+  'pages.s3Management.deleteButton': '删除',
+  'pages.s3Management.deleteConfirmTitle': '确定要删除这个S3配置吗？',
+  
+  // 表格列标题
+  'pages.s3Management.columnName': '名称标识',
+  'pages.s3Management.columnEndpoint': '请求地址',
+  'pages.s3Management.columnAccessKey': '账户',
+  'pages.s3Management.columnBucket': '桶',
+  'pages.s3Management.columnRegion': 'Region',
+  'pages.s3Management.columnAction': '操作',
+  
+  // S3表单相关
+  'pages.s3Management.nameLabel': '名称标识',
+  'pages.s3Management.configEffectDescription': '配置生效说明',
+  'pages.s3Management.configEffectDetails': '更新的配置信息需用户重新连接SFTP服务才会生效，存量正在连接的用户将继续按照既往配置运行。',
+  'pages.s3Management.pleaseInputName': '请输入名称标识!',
+  'pages.s3Management.placeholderName': '请输入S3存储的名称标识',
+  'pages.s3Management.endpointLabel': '请求地址',
+  'pages.s3Management.pleaseInputEndpoint': '请输入请求地址!',
+  'pages.s3Management.placeholderEndpoint': '请输入S3请求地址，例如：https://s3.amazonaws.com',
+  'pages.s3Management.accessKeyLabel': '账户',
+  'pages.s3Management.pleaseInputAccessKey': '请输入账户!',
+  'pages.s3Management.placeholderAccessKey': '请输入访问密钥ID',
+  'pages.s3Management.secretKeyLabel': '密码',
+  'pages.s3Management.pleaseInputSecretKey': '请输入密码!',
+  'pages.s3Management.placeholderSecretKey': '请输入秘密访问密钥',
+  'pages.s3Management.bucketLabel': '桶',
+  'pages.s3Management.pleaseInputBucket': '请输入桶名称!',
+  'pages.s3Management.placeholderBucket': '请输入S3桶名称',
+  'pages.s3Management.regionLabel': 'Region',
+  'pages.s3Management.regionTooltip': '指定API请求的地区，例如: us-east-1',
+  'pages.s3Management.placeholderRegion': '请输入地区',
+  
+  // 弹窗和按钮
+  'pages.s3Management.addModalTitle': '添加S3存储',
+  'pages.s3Management.editModalTitle': '编辑S3存储',
+  'pages.s3Management.addButtonText': '添加',
+  'pages.s3Management.updateButtonText': '更新',
+  'pages.s3Management.cancelButtonText': '取消',
+  
+  // 通用按钮
+  'pages.common.confirm': '确定',
+  'pages.common.cancel': '取消'
 };

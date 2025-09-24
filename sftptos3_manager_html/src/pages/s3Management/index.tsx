@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button, Space, message, Popconfirm } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { ProTable, ProColumns } from '@ant-design/pro-components';
+import { useIntl } from '@umijs/max';
 import S3Form from './components/S3Form';
 import { queryS3Storages, createS3Storage, updateS3Storage, deleteS3Storage } from '@/services/s3';
 
@@ -19,6 +20,7 @@ const S3Management: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [currentConfig, setCurrentConfig] = useState<S3Config | null>(null);
   const actionRef = useRef();
+  const intl = useIntl();
 
   // 获取S3配置列表
   const fetchS3Configs = async (params: { s3Name?: string; current?: number; pageSize?: number; sort?: string }) => {
@@ -160,7 +162,7 @@ const S3Management: React.FC = () => {
   // 列配置
   const columns = [
     {
-      title: '名称标识',
+      title: intl.formatMessage({ id: 'pages.s3Management.columnName' }),
       dataIndex: 's3Name',
       key: 's3Name',
       valueType: 'text',
@@ -168,35 +170,35 @@ const S3Management: React.FC = () => {
       hideInSearch: false,
     },
     {
-      title: '请求地址',
+      title: intl.formatMessage({ id: 'pages.s3Management.columnEndpoint' }),
       dataIndex: 'endpoint',
       key: 'endpoint',
       valueType: 'text',
       hideInSearch: true,
     },
     {
-      title: '账户',
+      title: intl.formatMessage({ id: 'pages.s3Management.columnAccessKey' }),
       dataIndex: 'accessKey',
       key: 'accessKey',
       valueType: 'text',
       hideInSearch: true,
     },
     {
-      title: '桶',
+      title: intl.formatMessage({ id: 'pages.s3Management.columnBucket' }),
       dataIndex: 'bucket',
       key: 'bucket',
       valueType: 'text',
       hideInSearch: true,
     },
     {
-      title: 'Region',
+      title: intl.formatMessage({ id: 'pages.s3Management.columnRegion' }),
       dataIndex: 'region',
       key: 'region',
       valueType: 'text',
       hideInSearch: true,
     },
     {
-      title: '操作',
+      title: intl.formatMessage({ id: 'pages.s3Management.columnAction' }),
       valueType: 'option',
       render: (_: any, record: S3Config) => (
         <Space>
@@ -205,20 +207,20 @@ const S3Management: React.FC = () => {
             icon={<EditOutlined />}
             onClick={() => showEditModal(record)}
           >
-            编辑
+            {intl.formatMessage({ id: 'pages.s3Management.editButton' })}
           </Button>
           <Popconfirm
-            title="确定要删除这个S3配置吗？"
+            title={intl.formatMessage({ id: 'pages.s3Management.deleteConfirmTitle' })}
             onConfirm={() => handleDeleteS3Config(record.id)}
-            okText="确定"
-            cancelText="取消"
+            okText={intl.formatMessage({ id: 'pages.common.confirm' })}
+            cancelText={intl.formatMessage({ id: 'pages.common.cancel' })}
           >
             <Button
               type="link"
               danger
               icon={<DeleteOutlined />}
             >
-              删除
+              {intl.formatMessage({ id: 'pages.s3Management.deleteButton' })}
             </Button>
           </Popconfirm>
         </Space>
@@ -234,7 +236,7 @@ const S3Management: React.FC = () => {
           icon={<PlusOutlined />}
           onClick={showAddModal}
         >
-          添加S3存储
+          {intl.formatMessage({ id: 'pages.s3Management.addButton' })}
         </Button>
       </Space>
 
