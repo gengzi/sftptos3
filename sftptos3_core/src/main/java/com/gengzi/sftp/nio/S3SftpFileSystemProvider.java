@@ -20,7 +20,6 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Function;
@@ -233,6 +232,7 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
                 // 是空目录，可以删除
                 delPath(s3Client, bucketName, deletePathKey, timeout, timeoutUnit);
             } else {
+                logger.error("path:{} dir is not empty", path);
                 throw new DirectoryNotEmptyException("dir is not empty");
             }
         }
@@ -291,7 +291,7 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
             }
 
             for (var key : sourceKeys) {
-                copyKey(s3Client,key, prefixWithSeparator, sourceBucket, s3TargetPath, fileExistsAndCannotReplace).get(timeOut, unit);
+                copyKey(s3Client, key, prefixWithSeparator, sourceBucket, s3TargetPath, fileExistsAndCannotReplace).get(timeOut, unit);
             }
 
         } catch (TimeoutException e) {

@@ -161,6 +161,7 @@ public class AuditSftpSubsystem extends SftpSubsystem {
         } catch (Exception e) {
             sftpAuditRepository().updateReadEvent("", OperateStatus.FAILURE.getStatus(),
                     e.getMessage(), LocalDateTime.now(), result.sftpAudit.getId());
+            throw e;
         }
         sftpAuditRepository().updateReadEvent("", OperateStatus.SUCCESS.getStatus(),
                 "", LocalDateTime.now(), result.sftpAudit.getId());
