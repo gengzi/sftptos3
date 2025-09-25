@@ -27,13 +27,6 @@ public class SftpConnectionAudit {
     @Column(name = "id", nullable = false)
     private Long id;
 
-    /**
-     * SFTP会话ID
-     */
-    @Size(max = 256)
-    @NotNull
-    @Column(name = "session_id", nullable = false, length = 256)
-    private String sessionId;
 
     /**
      * 连接用户名

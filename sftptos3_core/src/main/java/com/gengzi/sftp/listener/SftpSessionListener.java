@@ -56,7 +56,6 @@ public class SftpSessionListener implements SessionListener {
                     InetSocketAddress inetSocketAddress = (InetSocketAddress) clientAddress;
                     String hostAddress = inetSocketAddress.getAddress().getHostAddress();
                     SftpConnectionAudit sftpConnectionAudit = new SftpConnectionAudit();
-                    sftpConnectionAudit.setSessionId(BufferUtils.toHex(session.getSessionId()));
                     sftpConnectionAudit.setClientIp(hostAddress);
                     sftpConnectionAudit.setClientPort(inetSocketAddress.getPort());
                     Long id = sftpConnectionAuditService.KeyEstablishedEvent(sftpConnectionAudit);
