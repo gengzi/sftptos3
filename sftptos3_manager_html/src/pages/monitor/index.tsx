@@ -208,7 +208,7 @@ const MonitorPage: React.FC = () => {
     try {
       // 如果有保存的服务地址，则调用实际API
       if (serviceAddress) {
-        const apiUrl = `${serviceAddress}/api/audit/list`;
+        const apiUrl = `${serviceAddress}/api/audit/client/list`;
         const params: any = {
           page: (pageNum || currentPage) - 1, // API使用0-based页码
           size: pageSizeNum || pageSize,
