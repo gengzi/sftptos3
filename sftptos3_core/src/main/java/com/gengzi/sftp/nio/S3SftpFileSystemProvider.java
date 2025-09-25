@@ -279,7 +279,15 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
                 prefixWithSeparator = sourcePrefix;
             } else {
                 sourceKeys = List.of(sourcePrefix);
-                prefixWithSeparator = sourcePrefix.substring(0, sourcePrefix.lastIndexOf(PATH_SEPARATOR)) + PATH_SEPARATOR;
+                // 处理根目录文件的情况
+                int lastSeparatorIndex = sourcePrefix.lastIndexOf(PATH_SEPARATOR);
+                if (lastSeparatorIndex == -1) {
+                    // 根目录下的文件，前缀为空字符串加路径分隔符
+                    prefixWithSeparator = PATH_SEPARATOR;
+                } else {
+                    // 非根目录文件，使用原逻辑
+                    prefixWithSeparator = sourcePrefix.substring(0, lastSeparatorIndex) + PATH_SEPARATOR;
+                }
             }
 
             for (var key : sourceKeys) {
