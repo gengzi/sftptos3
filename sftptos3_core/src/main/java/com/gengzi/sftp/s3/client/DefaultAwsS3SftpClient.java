@@ -80,7 +80,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
             HashMap<String, ObjectHeadResponse> prefixes = new HashMap<>();
 
             Flux.from(commonPrefixSdkPublisher).doOnNext(commonPrefix -> {
-                prefixes.put(commonPrefix.prefix(), new ObjectHeadResponse(
+                prefixes.put(commonPrefix.prefix().endsWith(Constants.PATH_SEPARATOR) ? commonPrefix.prefix().substring(0, commonPrefix.prefix().length() - 1) : commonPrefix.prefix(), new ObjectHeadResponse(
                         FileTime.fromMillis(0),
                         0L,
                         null,
@@ -133,7 +133,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                     });
 
                     response.commonPrefixes().stream().forEach(commonPrefix -> {
-                        prefixes.put(commonPrefix.prefix(), new ObjectHeadResponse(
+                        prefixes.put(commonPrefix.prefix().endsWith(Constants.PATH_SEPARATOR) ? commonPrefix.prefix().substring(0, commonPrefix.prefix().length() - 1) : commonPrefix.prefix(), new ObjectHeadResponse(
                                 FileTime.fromMillis(0),
                                 0L,
                                 null,

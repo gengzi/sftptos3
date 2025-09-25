@@ -3,6 +3,7 @@ package com.gengzi.sftp.monitor.controller;
 
 
 import com.gengzi.sftp.monitor.response.Result;
+import com.gengzi.sftp.monitor.service.SftpAuditService;
 import com.gengzi.sftp.monitor.service.SftpConnectionAuditService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +19,9 @@ public class AuditController {
     @Autowired
     private SftpConnectionAuditService sftpConnectionAuditService;
 
+    @Autowired
+    private SftpAuditService sftpAuditService;
+
     /**
      * 1, 登录数，认证成功，认证失败
      * 2，下载文件数，下载成功，下载失败
@@ -31,12 +35,17 @@ public class AuditController {
 
     @GetMapping("/client/list")
     @ResponseBody
-    public Result<?> list(@RequestParam(required = false) String username,
+    public Result<?> clientList(@RequestParam(required = false) String username,
                           @PageableDefault(page = 0, size = 10 , sort = "createTime", direction = Sort.Direction.DESC ) Pageable pageable) {
         return Result.success(sftpConnectionAuditService.list(username, pageable));
     }
 
-
+    @GetMapping("/opt/list")
+    @ResponseBody
+    public Result<?> optList(@RequestParam(required = false) String clientName,
+                          @PageableDefault(page = 0, size = 10 , sort = "createTime", direction = Sort.Direction.DESC ) Pageable pageable) {
+        return Result.success(sftpAuditService.list(clientName, pageable));
+    }
 
 
 

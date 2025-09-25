@@ -94,6 +94,12 @@ public class SftpConnectionAuditServiceImpl implements SftpConnectionAuditServic
             if (username != null && !username.isEmpty()) {
                 predicates.add(cb.like(root.get("username"),  username + "%"));
             }
+            // 获取当前时间
+            LocalDateTime now = LocalDateTime.now();
+            // 计算7天前的时间
+            LocalDateTime sevenDaysAgo = now.minusDays(7);
+            predicates.add(cb.between(root.get("createTime"), sevenDaysAgo, now));
+
             // 添加排序条件
             query.orderBy(cb.desc(root.get("createTime")));
 
