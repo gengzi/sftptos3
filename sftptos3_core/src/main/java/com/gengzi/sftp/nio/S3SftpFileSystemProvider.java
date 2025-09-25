@@ -258,6 +258,12 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
 
         var s3SourcePath = checkPath(source);
         var s3TargetPath = checkPath(target);
+        // 判断源path是否为path
+        S3SftpBasicFileAttributes s3SftpBasicFileAttributes = S3SftpBasicFileAttributes.get(s3SourcePath);
+        if(s3SftpBasicFileAttributes.isDirectory()){
+            logger.error("Invalid command,because source path:{} is dir",s3SourcePath.toString());
+            throw new FileSystemException("Invalid command,because source path is dir");
+        }
         // 移除缓存
         DirectoryContentsNamesCacheUtil.removeCacheValue(s3TargetPath.getFileSystem(), s3TargetPath.getKey());
 

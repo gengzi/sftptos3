@@ -11,7 +11,6 @@ public enum OptType {
     DELETE_FILE("delete_file"),
     DELETE_DIR("delete_dir"),
     RENAME("rename"),
-    MOVE("move"),
     ;
 
     private String type;
