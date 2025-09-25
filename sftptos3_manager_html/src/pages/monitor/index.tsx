@@ -43,6 +43,9 @@ import {
   DownloadOutlined,
   UploadOutlined,
   MoreOutlined,
+  FolderOutlined,
+  EditOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons';
 import { Line, Column } from '@ant-design/plots';
 import type { ColumnsType } from 'antd/es/table';
@@ -97,15 +100,39 @@ interface TrafficData {
   download: number;
 }
 
+// 根据新的API响应更新FileOperation接口
 interface FileOperation {
-  id: string;
-  filename: string;
-  type: 'upload' | 'download';
-  size: string;
-  progress: number;
-  status: 'processing' | 'completed' | 'failed';
-  startTime: string;
-  username: string;
+  id: number;
+  createTime: string;
+  remark: string | null;
+  clientAddress: string;
+  clientUsername: string;
+  filePath: string;
+  type: string;
+  fileStroageInfo: string;
+  optTime: string;
+  fileSize: string;
+  operateResult: number;
+  errorMsg: string;
+  clientAuditId: number;
+  completionTime: string | null;
+  removeFilePath: string | null;
+}
+
+// 定义今日详情统计指标接口
+interface DailyStatistics {
+  loginTotal: number;
+  loginSuccess: number;
+  loginFailed: number;
+  downloadTotal: number;
+  downloadSuccess: number;
+  downloadFailed: number;
+  uploadTotal: number;
+  uploadSuccess: number;
+  uploadFailed: number;
+  deleteTotal: number;
+  deleteSuccess: number;
+  deleteFailed: number;
 }
 
 const MonitorPage: React.FC = () => {
@@ -131,83 +158,109 @@ const MonitorPage: React.FC = () => {
   // 分页状态
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
+  // 文件操作分页状态
+  const [fileOpCurrentPage, setFileOpCurrentPage] = useState<number>(1);
+  const [fileOpPageSize, setFileOpPageSize] = useState<number>(10);
+  const [totalFileOperations, setTotalFileOperations] = useState<number>(0);
   // 总记录数状态
   const [totalClients, setTotalClients] = useState<number>(0);
+  
+  // 今日详情统计数据
+  const [dailyStats, setDailyStats] = useState<DailyStatistics>({
+    loginTotal: 0,
+    loginSuccess: 0,
+    loginFailed: 0,
+    downloadTotal: 0,
+    downloadSuccess: 0,
+    downloadFailed: 0,
+    uploadTotal: 0,
+    uploadSuccess: 0,
+    uploadFailed: 0,
+    deleteTotal: 0,
+    deleteSuccess: 0,
+    deleteFailed: 0
+  });
 
-  // 生成模拟服务器资源数据
-  const generateServerResourceData = (): ServerResource => {
-    return {
-      cpu: Math.floor(Math.random() * 70) + 10, // 10-80%
-      memory: Math.floor(Math.random() * 60) + 20, // 20-80%
-      disk: Math.floor(Math.random() * 50) + 10, // 10-60%
-      network: Math.floor(Math.random() * 80) + 5 // 5-85%
-    };
-  };
+  // 模拟数据生成函数已移除，页面现在直接调用API获取数据
 
-  // 生成模拟流量数据
-  const generateTrafficData = (): TrafficData[] => {
-    const data: TrafficData[] = [];
-    const now = new Date();
-    
-    // 根据时间范围生成不同数量的数据点
-    const points = timeRange === '24h' ? 24 : timeRange === '7d' ? 7 : 30;
-    const interval = timeRange === '24h' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-    
-    for (let i = points - 1; i >= 0; i--) {
-      const time = new Date(now.getTime() - i * interval);
-      let timeStr = '';
+  // 从API获取今日详情统计数据
+  const fetchDailyStats = useCallback(async () => {
+    if (!serviceAddress) {
+      console.log('服务地址未设置');
+      return;
+    }
+
+    try {
+      const apiUrl = `${serviceAddress}/api/audit/daily/stats`;
       
-      if (timeRange === '24h') {
-        timeStr = `${time.getHours().toString().padStart(2, '0')}:00`;
-      } else {
-        timeStr = `${time.getMonth() + 1}/${time.getDate()}`;
+      // 使用原生fetch API来避免全局baseURL配置影响
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
-      data.push({
-        time: timeStr,
-        upload: Math.floor(Math.random() * 500) + 100,
-        download: Math.floor(Math.random() * 400) + 50
-      });
-    }
-    
-    return data;
-  };
 
-  // 生成模拟文件操作数据
-  const generateFileOperationData = (): FileOperation[] => {
-    const types: ('upload' | 'download')[] = ['upload', 'download'];
-    const statuses: ('processing' | 'completed' | 'failed')[] = ['processing', 'completed', 'failed'];
-    const filenames = ['项目计划.docx', '财务报表.xlsx', '产品设计图.png', '用户调研报告.pdf', '数据分析.zip'];
-    const sizes = ['1.2MB', '3.5MB', '8.7MB', '2.3MB', '5.6MB'];
-    
-    const operations: FileOperation[] = [];
-    
-    for (let i = 1; i <= 10; i++) {
-      const type = types[Math.floor(Math.random() * types.length)];
-      const status = statuses[Math.floor(Math.random() * statuses.length)];
-      const progress = status === 'processing' ? Math.floor(Math.random() * 100) : status === 'completed' ? 100 : 0;
-      
-      operations.push({
-        id: `file-${i}`,
-        filename: filenames[Math.floor(Math.random() * filenames.length)],
-        type,
-        size: sizes[Math.floor(Math.random() * sizes.length)],
-        progress,
-        status,
-        startTime: `2023-10-20 1${Math.floor(Math.random() * 2)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}:00`,
-        username: `user${Math.floor(Math.random() * 8) + 1}`
-      });
+      const data = await response.json();
+      setDailyStats(data);
+    } catch (error) {
+      console.error('获取今日详情统计数据失败:', error);
+      // 可以添加错误提示
     }
-    
-    return operations;
-  };
+  }, [serviceAddress]);
+
+  // 从API获取文件操作数据
+  const fetchFileOperations = useCallback(async (pageNum?: number, pageSizeNum?: number) => {
+    try {
+      // 从serviceAddress中获取地址并拼接对应的路径，与客户端列表保持一致
+      const apiUrl = `${serviceAddress}/api/audit/opt/list`;
+      const params = {
+        page: (pageNum || fileOpCurrentPage) - 1, // API使用0-based页码
+        size: pageSizeNum || fileOpPageSize,
+        sort: 'createTime,desc'
+      };
+      
+      // 构建查询字符串
+      const queryString = new URLSearchParams(params).toString();
+      const fullUrl = `${apiUrl}?${queryString}`;
+      
+      // 使用原生fetch API确保完全控制请求URL
+      const response = await fetch(fullUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const data = await response.json();
+      console.log('文件操作API返回数据:', data);
+      
+      // 处理API返回的数据
+      if (data && data.code === 200 && data.success && data.data && data.data.content) {
+        setFileOperations(data.data.content);
+        setTotalFileOperations(data.data.totalElements || 0);
+        return true;
+      } else {
+        console.warn('文件操作API返回格式异常');
+        return false;
+      }
+    } catch (error) {
+      console.error('获取文件操作列表失败:', error);
+      return false;
+    }
+  }, [serviceAddress, fileOpCurrentPage, fileOpPageSize]);
 
   // 修改fetchData函数，使用参数而不是依赖currentPage和pageSize
   const fetchData = useCallback(async (pageNum?: number, pageSizeNum?: number) => {
     setLoading(true);
     try {
-      // 如果有保存的服务地址，则调用实际API
+      // 如果有保存的服务地址，则调用实际API获取客户端列表
       if (serviceAddress) {
+        // 确保API地址正确拼接，避免与baseURL冲突
         const apiUrl = `${serviceAddress}/api/audit/client/list`;
         const params: any = {
           page: (pageNum || currentPage) - 1, // API使用0-based页码
@@ -220,31 +273,38 @@ const MonitorPage: React.FC = () => {
           params.username = usernameFilter;
         }
         
-        // 调用API获取客户端列表数据
-        const response = await request<any>(apiUrl, {
+        // 构建查询字符串
+        const queryString = new URLSearchParams(params).toString();
+        const fullUrl = `${apiUrl}?${queryString}`;
+        
+        // 使用原生fetch API确保完全控制请求URL
+        const response = await fetch(fullUrl, {
           method: 'GET',
-          params: params,
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
         
+        const data = await response.json();
         // 调试日志，帮助排查API返回格式问题
-        console.log('API返回数据:', response);
+        console.log('客户端列表API返回数据:', data);
         
         // 尝试从不同可能的路径获取数据
         let clientData = [];
         let total = 0;
         
         // 提取数据列表
-        if (response && response.data && response.data.content) {
-          clientData = response.data.content;
+        if (data && data.data && data.data.content) {
+          clientData = data.data.content;
           // 提取总记录数
-          total = response.data.totalElements || 0;
-        } else if (response && response.content) {
-          clientData = response.content;
+          total = data.data.totalElements || 0;
+        } else if (data && data.content) {
+          clientData = data.content;
           // 提取总记录数
-          total = response.totalElements || 0;
-        } else if (Array.isArray(response)) {
-          clientData = response;
-          total = response.length;
+          total = data.totalElements || 0;
+        } else if (Array.isArray(data)) {
+          clientData = data;
+          total = data.length;
         }
         
         setClients(clientData);
@@ -255,21 +315,24 @@ const MonitorPage: React.FC = () => {
         setTotalClients(0);
       }
       
-      // 其他数据仍然使用模拟数据
-      setServerResources(generateServerResourceData());
-      setTrafficData(generateTrafficData());
-      setFileOperations(generateFileOperationData());
+      // 直接调用API获取文件操作数据，不再使用模拟数据
+      await fetchFileOperations();
+      // 刷新今日详情统计数据
+      await fetchDailyStats();
     } catch (error) {
-      console.error('获取客户端列表失败:', error);
-      // 发生错误时保留现有数据，而不是清空
-      // 只更新其他模拟数据
-      setServerResources(generateServerResourceData());
-      setTrafficData(generateTrafficData());
-      setFileOperations(generateFileOperationData());
+      console.error('获取数据失败:', error);
+      // 发生错误时保留现有数据
+      try {
+        // 尝试单独获取文件操作数据
+        await fetchFileOperations();
+      } catch (fileError) {
+        console.error('获取文件操作数据失败:', fileError);
+        // 不使用模拟数据，保留现有数据
+      }
     } finally {
       setLoading(false);
     }
-  }, [serviceAddress, usernameFilter]);
+  }, [serviceAddress, usernameFilter, fetchFileOperations, fetchDailyStats]);
 
   // 初始化数据
   useEffect(() => {
@@ -400,12 +463,12 @@ const MonitorPage: React.FC = () => {
       }
   ];
 
-  // 文件操作表格列定义
+  // 文件操作表格列定义 - 根据新的API响应格式更新
   const fileOperationColumns: ColumnsType<FileOperation> = [
     {
-      title: '文件名',
-      dataIndex: 'filename',
-      key: 'filename',
+      title: '文件路径',
+      dataIndex: 'filePath',
+      key: 'filePath',
       render: (text: string) => (
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <FileOutlined style={{ marginRight: 8, color: '#1890ff' }} />
@@ -414,45 +477,88 @@ const MonitorPage: React.FC = () => {
       )
     },
     {
-      title: '类型',
-      dataIndex: 'type',
-      key: 'type',
-      width: 100,
-      render: (type: string) => (
-        <Tag color={type === 'upload' ? 'blue' : 'green'}>
-          {type === 'upload' ? (
-            <><UploadOutlined style={{ marginRight: 4 }} /> 上传</>
-          ) : (
-            <><DownloadOutlined style={{ marginRight: 4 }} /> 下载</>
-          )}
-        </Tag>
-      )
-    },
+        title: '类型',
+        dataIndex: 'type',
+        key: 'type',
+        width: 120,
+        render: (type: string) => {
+          switch (type) {
+            case 'upload':
+              return (
+                <Tag color="blue">
+                  <UploadOutlined style={{ marginRight: 4 }} /> 上传
+                </Tag>
+              );
+            case 'download':
+              return (
+                <Tag color="green">
+                  <DownloadOutlined style={{ marginRight: 4 }} /> 下载
+                </Tag>
+              );
+            case 'delete_file':
+              return (
+                <Tag color="red">
+                  <FileOutlined style={{ marginRight: 4 }} /> 删除文件
+                </Tag>
+              );
+            case 'delete_dir':
+              return (
+                <Tag color="orange">
+                  <FolderOutlined style={{ marginRight: 4 }} /> 删除目录
+                </Tag>
+              );
+            case 'rename':
+              return (
+                <Tag color="purple">
+                  <EditOutlined style={{ marginRight: 4 }} /> 重命名
+                </Tag>
+              );
+            default:
+              return (
+                <Tag color="default">
+                  <InfoCircleOutlined style={{ marginRight: 4 }} /> 未知
+                </Tag>
+              );
+          }
+        }
+      },
     {
       title: '大小',
-      dataIndex: 'size',
-      key: 'size',
-      width: 100
+      dataIndex: 'fileSize',
+      key: 'fileSize',
+      width: 100,
+      render: (size: string) => {
+        // 格式化文件大小
+        const numSize = parseInt(size);
+        if (isNaN(numSize)) return size;
+        if (numSize >= 1024 * 1024) {
+          return `${(numSize / (1024 * 1024)).toFixed(2)}MB`;
+        } else if (numSize >= 1024) {
+          return `${(numSize / 1024).toFixed(2)}KB`;
+        }
+        return `${numSize}B`;
+      }
     },
     {
-      title: '进度',
-      dataIndex: 'progress',
-      key: 'progress',
-      render: (_: number, record: FileOperation) => {
-        if (record.status === 'processing') {
-          return (
-            <div>
-              <Progress percent={record.progress} size="small" status="active" />
-              <Text type="secondary" style={{ fontSize: 12, float: 'right' }}>{record.progress}%</Text>
-            </div>
-          );
-        } else if (record.status === 'completed') {
-          return (
-            <div>
-              <Progress percent={100} size="small" status="success" />
-              <Text type="secondary" style={{ fontSize: 12, float: 'right' }}>100%</Text>
-            </div>
-          );
+      title: '状态',
+      dataIndex: 'operateResult',
+      key: 'operateResult',
+      width: 100,
+      render: (result: number, record: FileOperation) => {
+        if (result === 1) {
+          if (record.completionTime) {
+            return (
+              <Tag color="green">
+                <CheckCircleOutlined style={{ marginRight: 4 }} /> 已完成
+              </Tag>
+            );
+          } else {
+            return (
+              <Tag color="processing">
+                <ClockCircleOutlined style={{ marginRight: 4 }} /> 处理中
+              </Tag>
+            );
+          }
         } else {
           return (
             <Tag color="red">
@@ -463,16 +569,31 @@ const MonitorPage: React.FC = () => {
       }
     },
     {
-      title: '开始时间',
-      dataIndex: 'startTime',
-      key: 'startTime',
-      width: 140
+      title: '操作时间',
+      dataIndex: 'optTime',
+      key: 'optTime',
+      width: 160,
+      render: (time: string) => formatTime(time)
     },
     {
       title: '操作人',
-      dataIndex: 'username',
-      key: 'username',
+      dataIndex: 'clientUsername',
+      key: 'clientUsername',
       width: 100
+    },
+    {
+      title: '客户端地址',
+      dataIndex: 'clientAddress',
+      key: 'clientAddress',
+      width: 150
+    },
+    {
+      title: '错误信息',
+      dataIndex: 'errorMsg',
+      key: 'errorMsg',
+      render: (msg: string) => msg || '-',
+      ellipsis: true,
+      tooltip: (text: string) => text
     }
   ];
 
@@ -519,7 +640,7 @@ const MonitorPage: React.FC = () => {
         <Col xs={24}>
           <Card 
           style={{ marginTop: 10 }}
-            title="正在连接的客户端列表" 
+            title="客户端列表（仅展示7日内）" 
             size="small"
             extra={
               <Space size="small" style={{ marginLeft: 10 }}>
@@ -572,57 +693,158 @@ const MonitorPage: React.FC = () => {
         {/* 下方 - 资源监控和流量统计，在所有屏幕尺寸下铺满宽度 */}
         <Col xs={24}>
           <div className="space-y-10">
-            {/* 服务器资源监控 */}
+            {/* 今日详情统计 */}
             <Card 
               title={
                 <div className="flex items-center">
-                  <SaveOutlined style={{ marginRight: 8, marginTop: 2 }} />
-                  服务器资源监控
+                  <BarChartOutlined style={{ marginRight: 8, marginTop: 2 }} />
+                  今日详情统计
                 </div>
               }
               size="small"
               bodyStyle={{ padding: 20 }}
+              extra={
+                <Button 
+                  size="small" 
+                  icon={<ReloadOutlined />}
+                  loading={loading} 
+                  onClick={fetchDailyStats}
+                >
+                  刷新
+                </Button>
+              }
             >
               <Row gutter={[16, 24]}>
-                <Col xs={24} sm={12} lg={6}>
-                  <Statistic 
-                    title="CPU使用率" 
-                    value={serverResources.cpu} 
-                    suffix="%" 
-                    valueStyle={{ color: serverResources.cpu > 70 ? '#f5222d' : '#3f8600' }}
-                    style={{ marginBottom: 8 }}
-                  />
-                  <Progress percent={serverResources.cpu} size="small" status="active" />
+                {/* 登录统计 */}
+                <Col xs={24} md={12} lg={6}>
+                  <div className="bg-blue-50 p-4 rounded-lg shadow-sm">
+                    <h3 className="text-lg font-semibold text-blue-700 mb-3">登录统计</h3>
+                    <div className="space-y-3">
+                      <Row gutter={8}>
+                        <Col span={12}>
+                          <Statistic 
+                            title="总登录数" 
+                            value={dailyStats.loginTotal} 
+                            valueStyle={{ color: '#1890ff' }}
+                            size="small"
+                          />
+                        </Col>
+                        <Col span={12}>
+                          <Statistic 
+                            title="成功" 
+                            value={dailyStats.loginSuccess} 
+                            valueStyle={{ color: '#52c41a' }}
+                            size="small"
+                          />
+                        </Col>
+                      </Row>
+                      <Statistic 
+                        title="失败" 
+                        value={dailyStats.loginFailed} 
+                        valueStyle={{ color: '#f5222d' }}
+                        size="small"
+                      />
+                    </div>
+                  </div>
                 </Col>
-                <Col xs={24} sm={12} lg={6}>
-                  <Statistic 
-                    title="内存使用率" 
-                    value={serverResources.memory} 
-                    suffix="%" 
-                    valueStyle={{ color: serverResources.memory > 70 ? '#f5222d' : '#3f8600' }}
-                    style={{ marginBottom: 8 }}
-                  />
-                  <Progress percent={serverResources.memory} size="small" status="active" />
+                
+                {/* 下载统计 */}
+                <Col xs={24} md={12} lg={6}>
+                  <div className="bg-green-50 p-4 rounded-lg shadow-sm">
+                    <h3 className="text-lg font-semibold text-green-700 mb-3">下载统计</h3>
+                    <div className="space-y-3">
+                      <Row gutter={8}>
+                        <Col span={12}>
+                          <Statistic 
+                            title="总下载数" 
+                            value={dailyStats.downloadTotal} 
+                            valueStyle={{ color: '#1890ff' }}
+                            size="small"
+                          />
+                        </Col>
+                        <Col span={12}>
+                          <Statistic 
+                            title="成功" 
+                            value={dailyStats.downloadSuccess} 
+                            valueStyle={{ color: '#52c41a' }}
+                            size="small"
+                          />
+                        </Col>
+                      </Row>
+                      <Statistic 
+                        title="失败" 
+                        value={dailyStats.downloadFailed} 
+                        valueStyle={{ color: '#f5222d' }}
+                        size="small"
+                      />
+                    </div>
+                  </div>
                 </Col>
-                <Col xs={24} sm={12} lg={6}>
-                  <Statistic 
-                    title="磁盘使用率" 
-                    value={serverResources.disk} 
-                    suffix="%" 
-                    valueStyle={{ color: serverResources.disk > 70 ? '#f5222d' : '#3f8600' }}
-                    style={{ marginBottom: 8 }}
-                  />
-                  <Progress percent={serverResources.disk} size="small" status="active" />
+                
+                {/* 上传统计 */}
+                <Col xs={24} md={12} lg={6}>
+                  <div className="bg-purple-50 p-4 rounded-lg shadow-sm">
+                    <h3 className="text-lg font-semibold text-purple-700 mb-3">上传统计</h3>
+                    <div className="space-y-3">
+                      <Row gutter={8}>
+                        <Col span={12}>
+                          <Statistic 
+                            title="总上传数" 
+                            value={dailyStats.uploadTotal} 
+                            valueStyle={{ color: '#1890ff' }}
+                            size="small"
+                          />
+                        </Col>
+                        <Col span={12}>
+                          <Statistic 
+                            title="成功" 
+                            value={dailyStats.uploadSuccess} 
+                            valueStyle={{ color: '#52c41a' }}
+                            size="small"
+                          />
+                        </Col>
+                      </Row>
+                      <Statistic 
+                        title="失败" 
+                        value={dailyStats.uploadFailed} 
+                        valueStyle={{ color: '#f5222d' }}
+                        size="small"
+                      />
+                    </div>
+                  </div>
                 </Col>
-                <Col xs={24} sm={12} lg={6}>
-                  <Statistic 
-                    title="网络使用率" 
-                    value={serverResources.network} 
-                    suffix="%" 
-                    valueStyle={{ color: serverResources.network > 70 ? '#f5222d' : '#3f8600' }}
-                    style={{ marginBottom: 8 }}
-                  />
-                  <Progress percent={serverResources.network} size="small" status="active" />
+                
+                {/* 删除统计 */}
+                <Col xs={24} md={12} lg={6}>
+                  <div className="bg-orange-50 p-4 rounded-lg shadow-sm">
+                    <h3 className="text-lg font-semibold text-orange-700 mb-3">删除统计</h3>
+                    <div className="space-y-3">
+                      <Row gutter={8}>
+                        <Col span={12}>
+                          <Statistic 
+                            title="总删除数" 
+                            value={dailyStats.deleteTotal} 
+                            valueStyle={{ color: '#1890ff' }}
+                            size="small"
+                          />
+                        </Col>
+                        <Col span={12}>
+                          <Statistic 
+                            title="成功" 
+                            value={dailyStats.deleteSuccess} 
+                            valueStyle={{ color: '#52c41a' }}
+                            size="small"
+                          />
+                        </Col>
+                      </Row>
+                      <Statistic 
+                        title="失败" 
+                        value={dailyStats.deleteFailed} 
+                        valueStyle={{ color: '#f5222d' }}
+                        size="small"
+                      />
+                    </div>
+                  </div>
                 </Col>
               </Row>
             </Card>
@@ -676,7 +898,7 @@ const MonitorPage: React.FC = () => {
                 title={
                   <div className="flex items-center">
                     <FileOutlined style={{ marginRight: 8, marginTop: 2 }} />
-                    客户端正在操作的文件列表：上传，下载
+                    客户端正在操作的文件列表：(仅展示7日内)
                   </div>
                 }
                 size="small"
@@ -698,10 +920,23 @@ const MonitorPage: React.FC = () => {
                   dataSource={fileOperations}
                   rowKey="id"
                   pagination={{
-                    pageSize: 5,
-                    showSizeChanger: false,
+                    current: fileOpCurrentPage,
+                    pageSize: fileOpPageSize,
+                    total: totalFileOperations,
+                    showSizeChanger: true,
                     showTotal: (total, range) => 
-                      `第 ${range[0]}-${range[1]} 条，共 ${total} 条`
+                      `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+                    onChange: (page, size) => {
+                      setFileOpCurrentPage(page);
+                      setFileOpPageSize(size);
+                      fetchFileOperations(page, size);
+                    },
+                    onShowSizeChange: (current, size) => {
+                      setFileOpPageSize(size);
+                      setFileOpCurrentPage(1);
+                      fetchFileOperations(1, size);
+                    },
+                    pageSizeOptions: ['5', '10', '20', '50']
                   }}
                   loading={loading}
                   scroll={{ y: 300 }}
