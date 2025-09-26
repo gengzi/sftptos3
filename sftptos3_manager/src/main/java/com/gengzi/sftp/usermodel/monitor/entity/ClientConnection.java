@@ -1,4 +1,4 @@
-package com.gengzi.sftp.monitor.entity;
+package com.gengzi.sftp.usermodel.monitor.entity;
 
 import java.time.LocalDateTime;
 

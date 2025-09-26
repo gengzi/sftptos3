@@ -78,36 +78,4 @@ public class SftpConnectionAuditServiceImpl implements SftpConnectionAuditServic
     public void sessionClosedEvent(Long id, String disconnectReason) {
         sftpConnectionAuditRepository.updateSessionClosedEventById(LocalDateTime.now(), disconnectReason, id);
     }
-
-    /**
-     * 获取分页列表
-     *
-     * @param username
-     * @param pageable
-     * @return
-     */
-    @Override
-    public Page<SftpConnectionAudit> list(String username, Pageable pageable) {
-        Specification<SftpConnectionAudit> spec = (root, query, cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
-            // 条件1：名称模糊匹配（如果name不为空）
-            if (username != null && !username.isEmpty()) {
-                predicates.add(cb.like(root.get("username"),  username + "%"));
-            }
-            // 获取当前时间
-            LocalDateTime now = LocalDateTime.now();
-            // 计算7天前的时间
-            LocalDateTime sevenDaysAgo = now.minusDays(7);
-            predicates.add(cb.between(root.get("createTime"), sevenDaysAgo, now));
-
-            // 添加排序条件
-            query.orderBy(cb.desc(root.get("createTime")));
-
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
-
-
-        return sftpConnectionAuditRepository.findAll(spec,pageable);
-
-    }
 }

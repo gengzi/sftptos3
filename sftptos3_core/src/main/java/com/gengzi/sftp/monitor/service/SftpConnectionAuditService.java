@@ -46,12 +46,4 @@ public interface SftpConnectionAuditService {
     void sessionClosedEvent(Long id, String disconnectReason);
 
 
-    /**
-     * 获取分页列表
-     * @param username
-     * @param pageable
-     * @return
-     */
-    Page<SftpConnectionAudit> list(String username, Pageable pageable);
-
 }

@@ -1,10 +1,11 @@
-package com.gengzi.sftp.monitor.controller;
+package com.gengzi.sftp.usermodel.monitor.controller;
 
 
-
-import com.gengzi.sftp.monitor.response.Result;
-import com.gengzi.sftp.monitor.service.SftpAuditService;
-import com.gengzi.sftp.monitor.service.SftpConnectionAuditService;
+import com.gengzi.sftp.usermodel.monitor.service.SftpAuditService;
+import com.gengzi.sftp.usermodel.monitor.service.SftpConnectionAuditService;
+import com.gengzi.sftp.usermodel.monitor.service.StatisticsRecordService;
+import com.gengzi.sftp.usermodel.response.Result;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/audit")
+@Tag(name = "审计", description = "审计")
 public class AuditController {
 
 
@@ -21,6 +23,9 @@ public class AuditController {
 
     @Autowired
     private SftpAuditService sftpAuditService;
+
+    @Autowired
+    private StatisticsRecordService statisticsRecordService;
 
     /**
      * 1, 登录数，认证成功，认证失败
@@ -47,6 +52,18 @@ public class AuditController {
         return Result.success(sftpAuditService.list(clientName, pageable));
     }
 
+
+    @GetMapping("/statistics/now")
+    @ResponseBody
+    public Result<?> statisticsNow() {
+        return Result.success(statisticsRecordService.statisticsNow());
+    }
+
+    @GetMapping("/statistics/traffic")
+    @ResponseBody
+    public Result<?> statisticsTraffic(String timeType) {
+        return Result.success(statisticsRecordService.statisticsTraffic(timeType));
+    }
 
 
 

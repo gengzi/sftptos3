@@ -148,7 +148,6 @@ public class AuditSftpSubsystem extends SftpSubsystem {
      * 删除一个目录
      * 在现有策略中，禁止删除一个非空目录
      *
-     *
      * @param id
      * @param path
      * @throws IOException
@@ -184,9 +183,9 @@ public class AuditSftpSubsystem extends SftpSubsystem {
     @Override
     protected void doRename(int id, String oldPath, String newPath, int flags) throws IOException {
         Result result = initRenameOptAudit(oldPath, newPath, OptType.RENAME);
-        try{
+        try {
             super.doRename(id, oldPath, newPath, flags);
-        }catch (Exception e){
+        } catch (Exception e) {
             sftpAuditRepository().updateReadEvent("", OperateStatus.FAILURE.getStatus(),
                     e.getMessage(), LocalDateTime.now(), result.sftpAudit.getId());
             throw e;
@@ -197,8 +196,6 @@ public class AuditSftpSubsystem extends SftpSubsystem {
     }
 
 
-
-
     @NotNull
     private Result initReadOrWriteAudit(FileHandle localHandle, OptType optType) {
         ServerSession session = getServerSession();
@@ -207,7 +204,7 @@ public class AuditSftpSubsystem extends SftpSubsystem {
         initBaseAudit(sftpAudit, session);
         Path file = localHandle.getFile();
         Path root = file.getRoot();
-        sftpAudit.setFilePath(file.toString());
+        sftpAudit.setFilePath(root.toString() + file.toString());
         sftpAudit.setType(optType.getType());
         if (file instanceof S3SftpPath) {
             S3SftpPath s3SftpPath = (S3SftpPath) file;

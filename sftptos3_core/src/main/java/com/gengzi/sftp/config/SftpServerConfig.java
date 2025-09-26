@@ -2,7 +2,6 @@ package com.gengzi.sftp.config;
 
 
 import com.gengzi.sftp.factory.DynamicVirtualFileSystemFactory;
-import com.gengzi.sftp.listener.FileWriteListener;
 import com.gengzi.sftp.listener.SftpSessionListener;
 import com.gengzi.sftp.listener.SftptoS3SftpEventListener;
 import com.gengzi.sftp.sshd.AuditSftpSubsystemFactory;
@@ -47,8 +46,6 @@ public class SftpServerConfig {
     private int sftpPort;
     @Value("${sftp.server.customerOptAuditRecord}")
     private boolean customerOptAuditRecord;
-    @Autowired
-    private FileWriteListener fileWriteListener;
     @Autowired
     private SftpUserPasswordAuthenticator passwordAuthenticator;
     @Autowired
