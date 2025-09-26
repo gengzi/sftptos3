@@ -86,8 +86,8 @@ interface ServerResource {
 
 interface TrafficData {
   time: string;
-  upload: string;
-  download: string;
+  upload: number;
+  download: number;
 }
 
 // 根据新的API响应更新FileOperation接口
@@ -280,11 +280,10 @@ const MonitorPage: React.FC = () => {
           const downloadSize = typeof item.downloadSize === 'string' ? parseFloat(item.downloadSize) : 
                               typeof item.downloadSize === 'number' ? item.downloadSize : 0;
           
-          // 将字节(B)转换为兆字节(MB)，保留2位小数，并添加mB单位
+          // 将字节(B)转换为兆字节(MB)，保留2位小数
           const bytesToMB = (bytes: number) => {
-            if (isNaN(bytes)) return '0 MB';
-            const mbValue = Math.round((bytes / (1024 * 1024)) * 100) / 100;
-            return `${mbValue} MB`;
+            if (isNaN(bytes)) return 0;
+            return Math.round((bytes / (1024 * 1024)) * 100) / 100;
           };
           
           return {
@@ -629,8 +628,10 @@ const MonitorPage: React.FC = () => {
     },
     color: ['#1890ff', '#52c41a'],
     yAxis: {
+      min: 0, // 强制Y轴从0开始
+      scale: true, // 启用刻度缩放
       label: {
-        formatter: (v: string) => `${v} MB`,
+        formatter: (v: number) => `${v} MB`,
       },
     },
   };
@@ -865,7 +866,7 @@ const MonitorPage: React.FC = () => {
                 <div className="flex items-center justify-between" >
                   <div className="flex items-center">
                     <LineChartOutlined style={{ marginRight: 8, marginTop: 2 }} />
-                    服务器流量监控：上传下载流量
+                    服务器流量监控：上传下载流量（MB）
                   </div>
                   <Select 
                     value={timeRange} 
