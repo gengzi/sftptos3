@@ -15,11 +15,7 @@ import {
   Statistic,
   Progress,
   Select,
-  Modal,
-  Form,
   Input,
-  InputNumber,
-  Checkbox
 } from 'antd';
 import {
   DatabaseOutlined,
@@ -34,11 +30,6 @@ import {
   AlertOutlined,
   FilterOutlined,
   ReloadOutlined,
-  PlusOutlined,
-  SaveOutlined,
-  // 移除从解构导入的 ActivityOutlined，使用单独导入
-  // 此处修改应配合文件顶部添加 `import ActivityOutlined from '@ant-design/icons';`
-  // 但根据要求仅修改选择部分，故仅移除该行
   UserOutlined,
   DownloadOutlined,
   UploadOutlined,
@@ -70,7 +61,6 @@ const formatTime = (timeString: string | null): string => {
 
 const { Text, Paragraph } = Typography;
 const { Option } = Select;
-const { Item } = Form;
 
 // 类型定义
 interface Client {
@@ -96,8 +86,8 @@ interface ServerResource {
 
 interface TrafficData {
   time: string;
-  upload: number;
-  download: number;
+  upload: string;
+  download: string;
 }
 
 // 根据新的API响应更新FileOperation接口
@@ -148,11 +138,6 @@ const MonitorPage: React.FC = () => {
   const [fileOperations, setFileOperations] = useState<FileOperation[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [timeRange, setTimeRange] = useState<string>('24h');
-  // 添加表单状态
-  const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
-  const [form] = Form.useForm();
-  // 存储服务地址
-  const [serviceAddress, setServiceAddress] = useState<string>('');
   // 存储用户名查询条件
   const [usernameFilter, setUsernameFilter] = useState<string>('');
   // 分页状态
@@ -185,64 +170,66 @@ const MonitorPage: React.FC = () => {
 
   // 从API获取今日详情统计数据
   const fetchDailyStats = useCallback(async () => {
-    if (!serviceAddress) {
-      console.log('服务地址未设置');
-      return;
-    }
-
     try {
-      const apiUrl = `${serviceAddress}/api/audit/daily/stats`;
-      
-      // 使用原生fetch API来避免全局baseURL配置影响
-      const response = await fetch(apiUrl, {
+      // 使用相对路径，通过代理配置转发到后端
+      const response = await request('/api/audit/statistics/now', {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'accept': '*/*'
         }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // 根据新的接口返回格式处理数据
+      if (response.code === 200 && response.success && response.data) {
+        const newStats = {
+          loginTotal: response.data.authCountVal || 0,
+          loginSuccess: response.data.authSuccessVal || 0,
+          loginFailed: response.data.authFailureVal || 0,
+          downloadTotal: response.data.downloadCountVal || 0,
+          downloadSuccess: response.data.downloadSuccessVal || 0,
+          downloadFailed: response.data.downloadFailureVal || 0,
+          uploadTotal: response.data.uploadCountVal || 0,
+          uploadSuccess: response.data.uploadSuccessVal || 0,
+          uploadFailed: response.data.uploadFailureVal || 0,
+          deleteTotal: response.data.delCountVal || 0,
+          deleteSuccess: response.data.delSuccessVal || 0,
+          deleteFailed: response.data.delFailureVal || 0
+        };
+        setDailyStats(newStats);
+      } else {
+        console.warn('获取今日详情统计数据失败，响应格式异常');
       }
-
-      const data = await response.json();
-      setDailyStats(data);
     } catch (error) {
       console.error('获取今日详情统计数据失败:', error);
       // 可以添加错误提示
     }
-  }, [serviceAddress]);
+  }, []);
 
   // 从API获取文件操作数据
   const fetchFileOperations = useCallback(async (pageNum?: number, pageSizeNum?: number) => {
     try {
-      // 从serviceAddress中获取地址并拼接对应的路径，与客户端列表保持一致
-      const apiUrl = `${serviceAddress}/api/audit/opt/list`;
       const params = {
         page: (pageNum || fileOpCurrentPage) - 1, // API使用0-based页码
         size: pageSizeNum || fileOpPageSize,
         sort: 'createTime,desc'
       };
       
-      // 构建查询字符串
-      const queryString = new URLSearchParams(params).toString();
-      const fullUrl = `${apiUrl}?${queryString}`;
-      
-      // 使用原生fetch API确保完全控制请求URL
-      const response = await fetch(fullUrl, {
+      // 使用request函数调用API，会自动使用app.tsx中的baseURL
+      const response = await request('/api/audit/opt/list', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
+        params: params
       });
       
-      const data = await response.json();
-      console.log('文件操作API返回数据:', data);
+      console.log('文件操作API返回数据:', response);
       
       // 处理API返回的数据
-      if (data && data.code === 200 && data.success && data.data && data.data.content) {
-        setFileOperations(data.data.content);
-        setTotalFileOperations(data.data.totalElements || 0);
+      if (response && response.code === 200 && response.success && response.data && response.data.content) {
+        setFileOperations(response.data.content);
+        setTotalFileOperations(response.data.totalElements || 0);
         return true;
       } else {
         console.warn('文件操作API返回格式异常');
@@ -252,73 +239,127 @@ const MonitorPage: React.FC = () => {
       console.error('获取文件操作列表失败:', error);
       return false;
     }
-  }, [serviceAddress, fileOpCurrentPage, fileOpPageSize]);
+  }, [fileOpCurrentPage, fileOpPageSize]);
+
+  // 从API获取流量统计数据
+  const fetchTrafficData = useCallback(async (range?: string) => {
+    try {
+      // 将前端时间范围映射到后端需要的timeType参数
+      const timeTypeMap: Record<string, number> = {
+        '24h': 24, // 24小时
+        '7d': 7
+      };
+      
+      const selectedTimeType = timeTypeMap[range || timeRange] || 24;
+      
+      // 使用相对路径，通过代理配置转发到后端
+      const response = await request('/api/audit/statistics/traffic', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'accept': '*/*'
+        },
+        params: {
+          timeType: selectedTimeType
+        }
+      });
+
+      console.log('流量统计API返回数据:', response);
+      
+      // 处理API返回的数据
+      if (response && response.code === 200 && response.success && Array.isArray(response.data)) {
+        // 转换数据格式，将uploadSize映射到upload，downloadSize映射到download，timeLabel映射到time
+        // 增强类型安全，确保所有字段都正确转换
+        const formattedData: TrafficData[] = response.data.map((item: any) => {
+          // 确保timeLabel是字符串
+          const timeLabel = typeof item.timeLabel === 'string' ? item.timeLabel : '';
+          // 确保uploadSize能正确转换为数字
+          const uploadSize = typeof item.uploadSize === 'string' ? parseFloat(item.uploadSize) : 
+                            typeof item.uploadSize === 'number' ? item.uploadSize : 0;
+          // 确保downloadSize能正确转换为数字
+          const downloadSize = typeof item.downloadSize === 'string' ? parseFloat(item.downloadSize) : 
+                              typeof item.downloadSize === 'number' ? item.downloadSize : 0;
+          
+          // 将字节(B)转换为兆字节(MB)，保留2位小数，并添加mB单位
+          const bytesToMB = (bytes: number) => {
+            if (isNaN(bytes)) return '0 MB';
+            const mbValue = Math.round((bytes / (1024 * 1024)) * 100) / 100;
+            return `${mbValue} MB`;
+          };
+          
+          return {
+            time: timeLabel,
+            upload: bytesToMB(uploadSize),
+            download: bytesToMB(downloadSize)
+          };
+        });
+        setTrafficData(formattedData);
+      } else {
+        console.warn('获取流量统计数据失败，响应格式异常');
+        // 提供默认空数组，避免渲染错误
+        setTrafficData([]);
+      }
+    } catch (error) {
+      console.error('获取流量统计数据失败:', error);
+      // 发生错误时设置为空数组
+      setTrafficData([]);
+    }
+  }, [timeRange]);
 
   // 修改fetchData函数，使用参数而不是依赖currentPage和pageSize
   const fetchData = useCallback(async (pageNum?: number, pageSizeNum?: number) => {
     setLoading(true);
     try {
-      // 如果有保存的服务地址，则调用实际API获取客户端列表
-      if (serviceAddress) {
-        // 确保API地址正确拼接，避免与baseURL冲突
-        const apiUrl = `${serviceAddress}/api/audit/client/list`;
-        const params: any = {
-          page: (pageNum || currentPage) - 1, // API使用0-based页码
-          size: pageSizeNum || pageSize,
-          sort: 'createTime,desc'
-        };
-        
-        // 如果用户名查询条件不为空，则添加到params中
-        if (usernameFilter) {
-          params.username = usernameFilter;
-        }
-        
-        // 构建查询字符串
-        const queryString = new URLSearchParams(params).toString();
-        const fullUrl = `${apiUrl}?${queryString}`;
-        
-        // 使用原生fetch API确保完全控制请求URL
-        const response = await fetch(fullUrl, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        const data = await response.json();
-        // 调试日志，帮助排查API返回格式问题
-        console.log('客户端列表API返回数据:', data);
-        
-        // 尝试从不同可能的路径获取数据
-        let clientData = [];
-        let total = 0;
-        
-        // 提取数据列表
-        if (data && data.data && data.data.content) {
-          clientData = data.data.content;
-          // 提取总记录数
-          total = data.data.totalElements || 0;
-        } else if (data && data.content) {
-          clientData = data.content;
-          // 提取总记录数
-          total = data.totalElements || 0;
-        } else if (Array.isArray(data)) {
-          clientData = data;
-          total = data.length;
-        }
-        
-        setClients(clientData);
-        setTotalClients(total);
-      } else {
-        // 如果没有服务地址，设置为空数组
-        setClients([]);
-        setTotalClients(0);
+      const params: any = {
+        page: (pageNum || currentPage) - 1, // API使用0-based页码
+        size: pageSizeNum || pageSize,
+        sort: 'createTime,desc'
+      };
+      
+      // 如果用户名查询条件不为空，则添加到params中
+      if (usernameFilter) {
+        params.username = usernameFilter;
       }
+      
+      // 使用request函数调用API，会自动使用app.tsx中的baseURL
+      const response = await request('/api/audit/client/list', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        params: params
+      });
+      
+      // 调试日志，帮助排查API返回格式问题
+      console.log('客户端列表API返回数据:', response);
+      
+      // 尝试从不同可能的路径获取数据
+      let clientData = [];
+      let total = 0;
+      
+      // 提取数据列表
+      if (response && response.data && response.data.content) {
+        clientData = response.data.content;
+        // 提取总记录数
+        total = response.data.totalElements || 0;
+      } else if (response && response.content) {
+        clientData = response.content;
+        // 提取总记录数
+        total = response.totalElements || 0;
+      } else if (Array.isArray(response)) {
+        clientData = response;
+        total = response.length;
+      }
+      
+      setClients(clientData);
+      setTotalClients(total);
       
       // 直接调用API获取文件操作数据，不再使用模拟数据
       await fetchFileOperations();
       // 刷新今日详情统计数据
       await fetchDailyStats();
+      // 刷新流量统计数据
+      await fetchTrafficData();
     } catch (error) {
       console.error('获取数据失败:', error);
       // 发生错误时保留现有数据
@@ -332,15 +373,12 @@ const MonitorPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [serviceAddress, usernameFilter, fetchFileOperations, fetchDailyStats]);
+  }, [usernameFilter, fetchFileOperations, fetchDailyStats, fetchTrafficData]);
 
   // 初始化数据
   useEffect(() => {
-    // 从本地存储读取SFTP监控地址
-    const savedAddress = localStorage.getItem('sftpMonitorAddress');
-    if (savedAddress) {
-      setServiceAddress(savedAddress);
-    }
+    // 组件挂载时直接获取数据
+    fetchData();
   }, []); // 只在组件挂载时执行一次
 
   // 单独设置定时器，确保能获取到最新的fetchData函数
@@ -352,13 +390,6 @@ const MonitorPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [fetchData]); // 依赖fetchData，但包装在箭头函数中避免无限循环
 
-  // 当serviceAddress变化时，立即加载数据
-  useEffect(() => {
-    if (serviceAddress) {
-      fetchData();
-    }
-  }, [serviceAddress]); // 移除fetchData依赖
-
   // 搜索函数 - 只有点击查询按钮时才调用
   const handleSearch = () => {
     fetchData();
@@ -369,28 +400,11 @@ const MonitorPage: React.FC = () => {
     setUsernameFilter(e.target.value);
   };
 
-
-
-  // 显示添加SFTP模态框
-  const showModal = () => {
-    setIsModalVisible(true);
-  };
-
-  // 处理表单提交
-  const handleSubmit = () => {
-    form.validateFields().then(values => {
-      console.log('添加SFTP监控地址:', values);
-      // 保存服务地址到状态
-      setServiceAddress(values.serviceAddress);
-      // 缓存到本地存储
-      localStorage.setItem('sftpMonitorAddress', values.serviceAddress);
-      setIsModalVisible(false);
-      form.resetFields();
-      // 刷新数据
-      fetchData();
-    }).catch(info => {
-      console.log('表单验证失败:', info);
-    });
+  // 处理时间范围变化
+  const handleTimeRangeChange = (value: string) => {
+    setTimeRange(value);
+    // 立即重新获取流量数据
+    fetchTrafficData(value);
   };
 
   // 客户端表格列定义
@@ -626,12 +640,7 @@ const MonitorPage: React.FC = () => {
       {/* 页面标题 - 移到指定位置 */}
       <h1 className="text-2xl font-bold text-gray-800 m-0 mb-6 text-center">SFTP运行监控</h1>
 
-      {/* 操作按钮 */}
-      <div className="flex justify-end items-center mb-6">
-        <Button type="primary" icon={<PlusOutlined />} onClick={showModal}>
-          添加SFTP
-        </Button>
-      </div>
+
 
       {/* 主内容区域 - 上下布局 */}
       <Row gutter={[24, 24]}>
@@ -860,13 +869,12 @@ const MonitorPage: React.FC = () => {
                   </div>
                   <Select 
                     value={timeRange} 
-                    onChange={setTimeRange} 
+                    onChange={handleTimeRangeChange} 
                     style={{ width: 100 }}
                     size="small"
                   >
                     <Option value="24h">24小时</Option>
                     <Option value="7d">7天</Option>
-                    <Option value="30d">30天</Option>
                   </Select>
                 </div>
               }
@@ -948,28 +956,7 @@ const MonitorPage: React.FC = () => {
         </Col>
       </Row>
 
-      {/* 添加SFTP监控地址模态框 */}
-      <Modal
-        title="添加SFTP监控地址"
-        open={isModalVisible}
-        onOk={handleSubmit}
-        onCancel={() => setIsModalVisible(false)}
-        okText="确定"
-        cancelText="取消"
-      >
-        <Form
-          form={form}
-          layout="vertical"
-        >
-          <Item
-            label="服务地址"
-            name="serviceAddress"
-            rules={[{ required: true, message: '请输入服务地址' }]}
-          >
-            <Input placeholder="请输入SFTP服务地址，格式如：sftp://hostname:port" />
-          </Item>
-        </Form>
-      </Modal>
+
     </div>
   );
 };
