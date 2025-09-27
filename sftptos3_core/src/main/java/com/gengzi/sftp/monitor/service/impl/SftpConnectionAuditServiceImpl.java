@@ -1,20 +1,15 @@
 package com.gengzi.sftp.monitor.service.impl;
 
+import com.gengzi.sftp.dao.SftpAuditRepository;
 import com.gengzi.sftp.dao.SftpConnectionAudit;
 import com.gengzi.sftp.dao.SftpConnectionAuditRepository;
 import com.gengzi.sftp.enums.AuthStatus;
 import com.gengzi.sftp.monitor.service.SftpConnectionAuditService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.criteria.Predicate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Service
 public class SftpConnectionAuditServiceImpl implements SftpConnectionAuditService {
@@ -23,6 +18,8 @@ public class SftpConnectionAuditServiceImpl implements SftpConnectionAuditServic
     @Autowired
     private SftpConnectionAuditRepository sftpConnectionAuditRepository;
 
+    @Autowired
+    private SftpAuditRepository sftpAuditRepository;
     /**
      * 更新审计表：认证失败事件
      *
@@ -71,11 +68,15 @@ public class SftpConnectionAuditServiceImpl implements SftpConnectionAuditServic
      * 断开会话
      *
      * @param id               主键
-     * @param disconnectReason 断开原因
+     * @param throwable 断开原因
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void sessionClosedEvent(Long id, String disconnectReason) {
-        sftpConnectionAuditRepository.updateSessionClosedEventById(LocalDateTime.now(), disconnectReason, id);
+    public void sessionClosedEvent(Long id, Throwable throwable) {
+        if (throwable != null) {
+            sftpConnectionAuditRepository.updateSessionClosedEventById(LocalDateTime.now(), throwable.getMessage(), id);
+            sftpAuditRepository.updateOperateResultFailerByClientAuditIdAndOperateResult(id, id);
+        }
+        sftpConnectionAuditRepository.updateSessionClosedEventById(LocalDateTime.now(), "Normal shutdown", id);
     }
 }

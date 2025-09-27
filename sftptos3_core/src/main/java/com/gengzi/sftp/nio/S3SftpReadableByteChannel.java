@@ -66,11 +66,16 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
         this.path = path;
         this.delegator = delegator;
         this.size = delegator.size();
+        // 设置当前每个分片的大小size
         this.maxFragmentSize = maxFragmentSize;
+        // 根据整个文件大小除于分片大小，得到分片数量
         this.numFragmentsInObject = (int) Math.ceil((float) size / (float) maxFragmentSize);
+        // 构建缓存，并设置最大缓存数量  如果一个分片是64kb 最大设置20个。 意味着缓存中能存储1280kb
         this.readAheadBuffersCache = Caffeine.newBuilder().maximumSize(maxNumberFragments).recordStats().build();
+        // 最大分片数
         this.maxNumberFragments = maxNumberFragments;
         this.open = true;
+        // 调用s3的超时时间
         this.timeout = timeout != null ? timeout : 5L;
         this.timeUnit = timeUnit != null ? timeUnit : TimeUnit.MINUTES;
     }
@@ -123,21 +128,24 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
      */
     @Override
     public int read(ByteBuffer dst) throws IOException {
+        // 获取目标要读取的文件内容长度
         logger.info("dst read length:{}", dst.limit() - dst.position());
         Objects.requireNonNull(dst);
-
+        // 获取的当前通道的位置
         var channelPosition = delegator.position();
         logger.debug("delegator position: {}", channelPosition);
 
+        // 如果当前通道的位置已经超过size说明已经读取完毕了
         // if the position of the delegator is at the end (>= size) return -1. we're finished reading.
         if (channelPosition >= size) {
             return -1;
         }
 
+        // 通过当前位置除于分片大小得到分片索引 （ 100 /  3kb = 33.33 向下取整 33）
         //figure out the index of the fragment the bytes would start in
         var fragmentIndex = fragmentIndexForByteNumber(channelPosition);
         logger.debug("fragment index: {}", fragmentIndex);
-
+        // 通过当前位置减去分片索引乘以分片大小得到分片在文件中的偏移量(100- 33*3kb = 1)
         var fragmentOffset = (int) (channelPosition - (fragmentIndex.longValue() * maxFragmentSize));
         logger.debug("fragment {} offset: {}", fragmentIndex, fragmentOffset);
 

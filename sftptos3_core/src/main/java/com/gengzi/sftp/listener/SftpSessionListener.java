@@ -6,7 +6,6 @@ import com.gengzi.sftp.dao.SftpConnectionAudit;
 import com.gengzi.sftp.monitor.service.SftpConnectionAuditService;
 import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.session.SessionListener;
-import org.apache.sshd.common.util.buffer.BufferUtils;
 import org.apache.sshd.server.session.ServerSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +25,7 @@ public class SftpSessionListener implements SessionListener {
 
     @Autowired
     private SftpConnectionAuditService sftpConnectionAuditService;
+
 
     /**
      * 监听异常情况
@@ -64,12 +64,12 @@ public class SftpSessionListener implements SessionListener {
             }
         }
 
-        if(Event.Authenticated.equals(event)){
+        if (Event.Authenticated.equals(event)) {
             if (session instanceof ServerSession) {
                 ServerSession serverSession = (ServerSession) session;
                 String username = serverSession.getUsername();
                 Long attributeId = serverSession.getAttribute(Constans.SERVERSESSION_DB_IDKEY);
-                sftpConnectionAuditService.authSuccessEvent(attributeId,username);
+                sftpConnectionAuditService.authSuccessEvent(attributeId, username);
             }
         }
 
@@ -87,7 +87,7 @@ public class SftpSessionListener implements SessionListener {
         if (session instanceof ServerSession) {
             Long id = session.getAttribute(Constans.SERVERSESSION_DB_IDKEY);
             Throwable throwable = session.getAttribute(Constans.SERVERSESSION_THROWABLE);
-            sftpConnectionAuditService.sessionClosedEvent(id,throwable == null ? "Normal shutdown" : throwable.getMessage()  );
+            sftpConnectionAuditService.sessionClosedEvent(id, throwable);
         }
         SessionListener.super.sessionClosed(session);
     }

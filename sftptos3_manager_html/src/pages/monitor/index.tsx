@@ -572,6 +572,18 @@ const MonitorPage: React.FC = () => {
               </Tag>
             );
           }
+        } else if (result === 3) {
+          return (
+            <Tag color="blue">
+              <FileSyncOutlined style={{ marginRight: 4 }} /> 进行中
+            </Tag>
+          );
+        } else if (result === 4) {
+          return (
+            <Tag color="orange">
+              <ClockCircleOutlined style={{ marginRight: 4 }} /> 待执行
+            </Tag>
+          );
         } else {
           return (
             <Tag color="red">
@@ -708,7 +720,7 @@ const MonitorPage: React.FC = () => {
               title={
                 <div className="flex items-center">
                   <BarChartOutlined style={{ marginRight: 8, marginTop: 2 }} />
-                  今日详情统计
+                  今日详情统计（10分钟更新一次）
                 </div>
               }
               size="small"
@@ -866,7 +878,7 @@ const MonitorPage: React.FC = () => {
                 <div className="flex items-center justify-between" >
                   <div className="flex items-center">
                     <LineChartOutlined style={{ marginRight: 8, marginTop: 2 }} />
-                    服务器流量监控：上传下载流量（MB）
+                    服务器流量监控：上传下载流量MB（10分钟更新一次）
                   </div>
                   <Select 
                     value={timeRange} 

@@ -41,9 +41,9 @@ public interface SftpConnectionAuditService {
     /**
      * 断开会话
      * @param id 主键
-     * @param disconnectReason 断开原因
+     * @param throwable 断开原因
      */
-    void sessionClosedEvent(Long id, String disconnectReason);
+    void sessionClosedEvent(Long id, Throwable throwable);
 
 
 }
