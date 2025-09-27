@@ -1,8 +1,10 @@
 package com.gengzi.sftp.nio;
 
 import com.gengzi.sftp.s3.client.S3SftpClient;
+import com.gengzi.sftp.util.S3DirectBufferUtil;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
@@ -71,7 +73,27 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
         // 根据整个文件大小除于分片大小，得到分片数量
         this.numFragmentsInObject = (int) Math.ceil((float) size / (float) maxFragmentSize);
         // 构建缓存，并设置最大缓存数量  如果一个分片是64kb 最大设置20个。 意味着缓存中能存储1280kb
-        this.readAheadBuffersCache = Caffeine.newBuilder().maximumSize(maxNumberFragments).recordStats().build();
+        this.readAheadBuffersCache = Caffeine.newBuilder()
+                .maximumSize(maxNumberFragments)
+                .expireAfterAccess(5, TimeUnit.MINUTES) // 5分钟未访问自动淘汰
+                .weakValues() // 无强引用时允许GC回收
+                .recordStats()
+                .removalListener((Integer key, CompletableFuture<ByteBuffer> value, RemovalCause cause) -> {
+                    logger.debug("Removed from cache: {}", key);
+                    if (value != null && value.isDone()) {
+                        try {
+                            ByteBuffer buffer = value.get();
+                            // 如果是直接缓冲区，可以尝试清理
+                            if (buffer.isDirect()) {
+                                S3DirectBufferUtil.freeDirectBuffer(buffer);
+                            }
+                        } catch (Exception e) {
+                            // 处理异常
+                            logger.error("Error while cleaning up direct buffer: " + e.getMessage(), e);
+                        }
+                    }
+                })
+                .build();
         // 最大分片数
         this.maxNumberFragments = maxNumberFragments;
         this.open = true;
@@ -199,7 +221,7 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
             // not currently obvious when this will happen or if we can recover
             logger.error(
                     "an exception occurred while reading bytes from {} that was not recovered by the S3 Client RetryCondition(s)",
-                    path.toUri());
+                    path.toUri(), e);
             throw new IOException(e);
         } catch (TimeoutException e) {
             throw new RuntimeException(e);
@@ -251,7 +273,6 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
         if (!priorIndexes.isEmpty()) {
             logger.debug("invalidating fragment(s) '{}' from '{}'",
                     priorIndexes.stream().map(Objects::toString).collect(Collectors.joining(", ")), path.toUri());
-
             readAheadBuffersCache.invalidateAll(priorIndexes);
         }
     }

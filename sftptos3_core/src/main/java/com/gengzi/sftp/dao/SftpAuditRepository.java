@@ -18,7 +18,4 @@ public interface SftpAuditRepository extends JpaRepository<SftpAudit, Long>, Jpa
     @Transactional
     int updateReadEvent(String fileSize, Byte operateResult, String errorMsg, LocalDateTime completionTime, long sftpAuditDbId);
 
-    @Query("update SftpAudit s set s.operateResult = 2 where s.clientAuditId = :clientAuditId and s.operateResult = 3")
-    @Modifying
-    void updateOperateResultFailerByClientAuditIdAndOperateResult(@NotNull Long clientAuditId);
 }

@@ -2,13 +2,14 @@ package com.gengzi.sftp.nio;
 
 
 import com.gengzi.sftp.s3.client.S3SftpClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
-import java.time.Duration;
 import java.util.Set;
 
 /**
@@ -18,9 +19,8 @@ import java.util.Set;
  */
 public class S3SftpSeekableByteChannel implements SeekableByteChannel {
 
-
     public static final long TIMEOUT_TIME_LENGTH_1 = 1L;
-
+    private static final Logger logger = LoggerFactory.getLogger(S3SftpSeekableByteChannel.class);
     // 定义position 当前通道读写位置
     private long position;
     // 定义一个close 标志，表示当前文件通道是否已经关闭
@@ -33,14 +33,6 @@ public class S3SftpSeekableByteChannel implements SeekableByteChannel {
     private S3SftpReadableByteChannel readableByteChannel;
     // 定义一个写通道
     private S3SftpWritableByteChannel writableByteChannel;
-
-    public S3SftpReadableByteChannel getReadableByteChannel() {
-        return readableByteChannel;
-    }
-
-    public S3SftpWritableByteChannel getWritableByteChannel() {
-        return writableByteChannel;
-    }
 
     // 包含了一个读通道和写通道
     public S3SftpSeekableByteChannel(S3SftpPath s3Path, S3SftpClient s3Client, Set<? extends OpenOption> options) throws IOException {
@@ -67,7 +59,7 @@ public class S3SftpSeekableByteChannel implements SeekableByteChannel {
 
         if (options.contains(StandardOpenOption.READ)) {
             S3SftpNioSpiConfiguration configuration = path.getFileSystem().configuration();
-            this.readableByteChannel = new S3SftpReadableByteChannel(s3Path, 64512, 20,
+            this.readableByteChannel = new S3SftpReadableByteChannel(s3Path, configuration.getFileMaxFragmentSize(), configuration.getFileMaxNumberFragments(),
                     s3Client, this, null, null);
             this.writableByteChannel = null;
         } else if (options.contains(StandardOpenOption.WRITE)) {
@@ -78,6 +70,14 @@ public class S3SftpSeekableByteChannel implements SeekableByteChannel {
         // 初始化close为false未关闭
         this.close = false;
 
+    }
+
+    public S3SftpReadableByteChannel getReadableByteChannel() {
+        return readableByteChannel;
+    }
+
+    public S3SftpWritableByteChannel getWritableByteChannel() {
+        return writableByteChannel;
     }
 
     /**
@@ -313,18 +313,17 @@ public class S3SftpSeekableByteChannel implements SeekableByteChannel {
      */
     @Override
     public void close() throws IOException {
-        //TODO 从 channel 集合中移除
-
-
+        logger.debug("S3SftpSeekableByteChannel close channel :{}", this.path.toString());
         synchronized (this) {
             if (this.readableByteChannel != null) {
                 this.readableByteChannel.close();
             }
             if (this.writableByteChannel != null) {
+                logger.debug("S3SftpSeekableByteChannel->writableByteChannel:{} close channel :{}", this.writableByteChannel, this.path.toString());
                 this.writableByteChannel.close();
             }
-
             this.close = true;
+            path.getFileSystem().deregisterClosedChannel(this);
         }
     }
 

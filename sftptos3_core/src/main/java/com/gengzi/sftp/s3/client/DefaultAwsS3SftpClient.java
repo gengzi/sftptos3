@@ -4,6 +4,7 @@ import com.gengzi.sftp.nio.S3SftpNioSpiConfiguration;
 import com.gengzi.sftp.nio.constans.Constants;
 import com.gengzi.sftp.s3.client.entity.ListObjectsResponse;
 import com.gengzi.sftp.s3.client.entity.ObjectHeadResponse;
+import com.gengzi.sftp.util.S3DirectBufferUtil;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Single;
 import org.jetbrains.annotations.NotNull;
@@ -31,10 +32,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> {
@@ -208,9 +206,16 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                                 .key(key)
                                 .range(range),
                         AsyncResponseTransformer.toBytes())
-                .thenApply(BytesWrapper::asByteBuffer);
-
-
+                .thenApply(
+                        getObjectResponseResponseBytes -> {
+                            try {
+                                ByteBuffer directBuffer = S3DirectBufferUtil.toDirectBuffer(getObjectResponseResponseBytes);
+                                return directBuffer;
+                            }finally {
+                                getObjectResponseResponseBytes = null;
+                            }
+                        }
+                );
     }
 
     /**

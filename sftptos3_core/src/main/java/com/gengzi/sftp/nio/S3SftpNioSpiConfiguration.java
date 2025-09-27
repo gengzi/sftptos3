@@ -7,7 +7,9 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.internal.BucketUtils;
 
 import java.net.URI;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -22,6 +24,13 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
     public static final String SECRET_KEY = "s3sftp.secretKey";
     public static final String REGION = "s3sftp.region";
     public static final Region REGION_VAL = Region.US_EAST_1;
+    // 下载文件时分片大小
+    public static final String FILE_MAXFRAGMENTSIZE = "s3sftp.fileMaxFragmentSize";
+    // 默认64kb
+    public static final int FILE_MAXFRAGMENTSIZE_VAL = 64 * 1024;
+    public static final String FILE_MAXNUMBERFRAGMENTS = "s3sftp.fileMaxNumberFragments";
+    public static final int FILE_MAXNUMBERFRAGMENTS_VAL = 30;
+
 
     // 默认超时时间
     public static final String TIME_OUT = "s3sftp.timeout";
@@ -57,6 +66,8 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
         put(CLIENT_NAME, CLIENT_NAME_DEFAULT_VAL);
         put(USER_ROOT_PATH, USER_ROOT_PATH_DEFAULT_VAL);
         put(REGION, REGION_VAL);
+        put(FILE_MAXFRAGMENTSIZE, FILE_MAXFRAGMENTSIZE_VAL);
+        put(FILE_MAXNUMBERFRAGMENTS, FILE_MAXNUMBERFRAGMENTS_VAL);
 
 
         // 覆盖默认配置
@@ -128,11 +139,12 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
 
     /**
      * 兼容根目录为 '\' '/' 的情况，都认为是用户根目录为整个对象存储下的
+     *
      * @return
      */
     public String userRootPath() {
         String root = get(USER_ROOT_PATH).toString();
-        if("\\".equals(root) || Constants.PATH_SEPARATOR.equals(root)){
+        if ("\\".equals(root) || Constants.PATH_SEPARATOR.equals(root)) {
             return "";
         }
         return root;
@@ -168,8 +180,17 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
     }
 
 
-    public String getStroageInfo(){
+    public String getStroageInfo() {
         String username = sessionContext().getUsername();
-        return String.format("%s:%s/%s",username, getEndpoint(), bucketName);
+        return String.format("%s:%s/%s", username, getEndpoint(), bucketName);
+    }
+
+
+    public int getFileMaxFragmentSize() {
+        return (int) get(FILE_MAXFRAGMENTSIZE);
+    }
+
+    public int getFileMaxNumberFragments() {
+        return (int) get(FILE_MAXNUMBERFRAGMENTS);
     }
 }

@@ -75,7 +75,6 @@ public class SftpConnectionAuditServiceImpl implements SftpConnectionAuditServic
     public void sessionClosedEvent(Long id, Throwable throwable) {
         if (throwable != null) {
             sftpConnectionAuditRepository.updateSessionClosedEventById(LocalDateTime.now(), throwable.getMessage(), id);
-            sftpAuditRepository.updateOperateResultFailerByClientAuditIdAndOperateResult(id, id);
         }
         sftpConnectionAuditRepository.updateSessionClosedEventById(LocalDateTime.now(), "Normal shutdown", id);
     }

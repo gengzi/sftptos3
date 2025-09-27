@@ -4,6 +4,8 @@ import com.gengzi.sftp.cache.DirectoryContentsNamesCacheUtil;
 import com.gengzi.sftp.cache.UserPathFileAttributesCacheUtil;
 import com.gengzi.sftp.s3.client.S3SftpClient;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -20,7 +22,7 @@ import java.util.Set;
  */
 public class S3SftpWritableByteChannel implements WritableByteChannel {
 
-
+    private static final Logger logger = LoggerFactory.getLogger(S3SftpWritableByteChannel.class);
     // 定义一个本地文件操作通道
     private final SeekableByteChannel channel;
     // 定义一个临时文件
@@ -29,6 +31,9 @@ public class S3SftpWritableByteChannel implements WritableByteChannel {
     private final S3SftpClient s3SftpClient;
     // 定义当前通道是否打开
     private boolean isOpen = false;
+
+    // 定义是否已经force了
+    private boolean isForce = false;
 
 
     public S3SftpWritableByteChannel(S3SftpPath s3SftpPath, S3SftpClient s3Client,
@@ -154,18 +159,28 @@ public class S3SftpWritableByteChannel implements WritableByteChannel {
      */
     @Override
     public void close() throws IOException {
+        logger.debug("writ close, prepare upload s3 path:{}", s3SftpPath.toString());
+        // 关闭本地文件通道
         channel.close();
         if (!isOpen) {
             return;
         }
         // 移除缓存
         UserPathFileAttributesCacheUtil.removeCacheValue(s3SftpPath);
-        DirectoryContentsNamesCacheUtil.removeCacheValue(s3SftpPath.getFileSystem(),s3SftpPath.getKey());
+        DirectoryContentsNamesCacheUtil.removeCacheValue(s3SftpPath.getFileSystem(), s3SftpPath.getKey());
+        // 可能存在一致性问题，上传成功或者失败，但是临时文件并没有删除
         // 上传文件到对象存储
-        s3SftpClient.putObjectByLocalFile(s3SftpPath.bucketName(), s3SftpPath.getKey(), tempFile);
-        // 删除临时文件
-        Files.deleteIfExists(tempFile);
-
+        try {
+            if (!this.isForce) {
+                s3SftpClient.putObjectByLocalFile(s3SftpPath.bucketName(), s3SftpPath.getKey(), tempFile);
+                logger.debug("upload s3 sucess path；{}", s3SftpPath.toString());
+            }
+        } catch (Exception e) {
+            logger.error("upload s3 error path；{}", s3SftpPath.toString(), e);
+            throw e;
+        } finally {
+            Files.deleteIfExists(tempFile);
+        }
         this.isOpen = false;
     }
 
@@ -173,7 +188,15 @@ public class S3SftpWritableByteChannel implements WritableByteChannel {
         if (!isOpen) {
             throw new ClosedChannelException();
         }
-        s3SftpClient.putObjectByLocalFile(s3SftpPath.bucketName(), s3SftpPath.getKey(), tempFile);
+        // 在sshd调用  fsync 命令时，上传文件到s3
+        logger.debug("writ force, prepare upload s3 path:{}", s3SftpPath.toString());
+        try {
+            s3SftpClient.putObjectByLocalFile(s3SftpPath.bucketName(), s3SftpPath.getKey(), tempFile);
+            logger.debug("upload s3 sucess path；{}", s3SftpPath.toString());
+        } catch (Exception e) {
+            logger.error("upload s3 error path；{}", s3SftpPath.toString(), e);
+        }
+        this.isForce = true;
     }
 
 }
