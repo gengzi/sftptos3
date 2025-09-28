@@ -27,9 +27,9 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
     // 下载文件时分片大小
     public static final String FILE_MAXFRAGMENTSIZE = "s3sftp.fileMaxFragmentSize";
     // 默认64kb
-    public static final int FILE_MAXFRAGMENTSIZE_VAL = 64 * 1024;
+    public static final int FILE_MAXFRAGMENTSIZE_VAL = 128 * 1024;
     public static final String FILE_MAXNUMBERFRAGMENTS = "s3sftp.fileMaxNumberFragments";
-    public static final int FILE_MAXNUMBERFRAGMENTS_VAL = 30;
+    public static final int FILE_MAXNUMBERFRAGMENTS_VAL = 15;
 
 
     // 默认超时时间

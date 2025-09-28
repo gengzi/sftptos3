@@ -2,6 +2,7 @@ package com.gengzi.sftp.nio;
 
 import com.gengzi.sftp.s3.client.S3SftpClient;
 import com.gengzi.sftp.util.S3DirectBufferUtil;
+import com.gengzi.sftp.util.SafeDirectBuffer;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
@@ -82,16 +83,14 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
                     logger.debug("Removed from cache: {}", key);
                     if (value != null && value.isDone()) {
                         try {
-                            ByteBuffer buffer = value.get();
-                            // 如果是直接缓冲区，可以尝试清理
-                            if (buffer.isDirect()) {
-                                S3DirectBufferUtil.freeDirectBuffer(buffer);
-                            }
+                            S3DirectBufferUtil.freeDirectBuffer(value.get());
                         } catch (Exception e) {
+                            value = null;
                             // 处理异常
                             logger.error("Error while cleaning up direct buffer: " + e.getMessage(), e);
                         }
                     }
+                    logger.debug("value :{}",value);
                 })
                 .build();
         // 最大分片数
@@ -172,9 +171,8 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
         logger.debug("fragment {} offset: {}", fragmentIndex, fragmentOffset);
 
         try {
-            final var fragment = Objects.requireNonNull(readAheadBuffersCache.get(fragmentIndex, this::computeFragmentFuture))
-                    .get(timeout, timeUnit)
-                    .asReadOnlyBuffer();
+            final ByteBuffer fragment = Objects.requireNonNull(readAheadBuffersCache.get(fragmentIndex, this::computeFragmentFuture))
+                    .get(timeout, timeUnit);
 
             fragment.position(fragmentOffset);
             logger.debug("fragment remaining: {}", fragment.remaining());
@@ -184,9 +182,17 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
             var limit = Math.min(fragment.remaining(), dst.remaining());
             logger.debug("byte limit: {}", limit);
 
-            var copiedBytes = new byte[limit];
-            fragment.get(copiedBytes, 0, limit);
-            dst.put(copiedBytes);
+            // 记录fragment的当前limit，避免修改原缓冲区
+            int originalFragmentLimit = fragment.limit();
+            // 限制拷贝长度
+            fragment.limit(fragment.position() + limit);
+            // 直接从fragment拷贝到dst，无临时数组
+            dst.put(fragment);
+            // 恢复fragment的limit
+            fragment.limit(originalFragmentLimit);
+
+            int copiedBytes = limit; // 直接使用limit作为拷贝字节数
+
 
             if (fragment.position() >= fragment.limit() / 2) {
 
@@ -209,9 +215,9 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
                 }
             }
 
-            delegator.position(channelPosition + copiedBytes.length);
-            logger.info("read data length:{}", copiedBytes.length);
-            return copiedBytes.length;
+            delegator.position(channelPosition + copiedBytes);
+            logger.info("read data length:{}", copiedBytes);
+            return copiedBytes;
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

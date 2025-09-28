@@ -1,5 +1,6 @@
 package com.gengzi.sftp.s3.client;
 
+import com.gengzi.sftp.config.NettyEventGroup;
 import com.gengzi.sftp.nio.S3SftpNioSpiConfiguration;
 import com.gengzi.sftp.nio.constans.Constants;
 import com.gengzi.sftp.s3.client.entity.ListObjectsResponse;
@@ -13,10 +14,11 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.core.BytesWrapper;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.core.async.SdkPublisher;
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
+import software.amazon.awssdk.http.nio.netty.SdkEventLoopGroup;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.*;
@@ -30,9 +32,12 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.time.Duration;
 import java.util.HashMap;
-import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> {
@@ -97,8 +102,8 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                 ));
             }).then().block();
             logger.debug("dir HeadResponse objects:{},prefixes:{}",
-                    objects.entrySet().stream().map( m -> m.getKey()+":"+m.getValue().toString()).collect(Collectors.joining("\n")),
-                    prefixes.entrySet().stream().map( m -> m.getKey()+":"+m.getValue().toString()).collect(Collectors.joining("\n")));
+                    objects.entrySet().stream().map(m -> m.getKey() + ":" + m.getValue().toString()).collect(Collectors.joining("\n")),
+                    prefixes.entrySet().stream().map(m -> m.getKey() + ":" + m.getValue().toString()).collect(Collectors.joining("\n")));
             return new ObjectHeadResponse(
                     FileTime.fromMillis(0),
                     0L,
@@ -163,10 +168,12 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
 
     @Override
     public S3AsyncClient createClient(S3SftpNioSpiConfiguration s3SftpNioSpiConfiguration) {
-//        ProxyConfiguration proxyConfig = ProxyConfiguration.builder()
-//                .host("127.0.0.1")    // 代理主机（Fiddler默认本地）
-//                .port(8888)           // 代理端口（Fiddler默认8888）
-//                .build();
+        // 构建 Netty HTTP 客户端，注入自定义 EventLoopGroup
+        NettyNioAsyncHttpClient nettyHttpClient = (NettyNioAsyncHttpClient) NettyNioAsyncHttpClient.builder()
+                .eventLoopGroup(SdkEventLoopGroup.create(NettyEventGroup.CUSTOMEVENTLOOPGROUP)) // 注入自定义线程池
+                .connectionTimeout(Duration.ofSeconds(10)) // 连接超时
+                .maxConcurrency(500) // 最大并发连接数（默认 100，可根据线程数调整）
+                .build();
 
         return S3AsyncClient.builder()
                 .region(Region.of(s3SftpNioSpiConfiguration.region()))
@@ -176,10 +183,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                 ))
                 .serviceConfiguration(service -> service
                         .pathStyleAccessEnabled(true)
-                )// 关键：配置HTTP客户端的代理
-//                .httpClientBuilder(NettyNioAsyncHttpClient.builder()
-//                        .proxyConfiguration(proxyConfig)
-//                )
+                ).httpClient(nettyHttpClient)
                 .build();
     }
 
@@ -209,9 +213,10 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                 .thenApply(
                         getObjectResponseResponseBytes -> {
                             try {
-                                ByteBuffer directBuffer = S3DirectBufferUtil.toDirectBuffer(getObjectResponseResponseBytes);
-                                return directBuffer;
-                            }finally {
+                                return S3DirectBufferUtil.toDirectBuffer(getObjectResponseResponseBytes);
+                            } finally {
+                                ByteBuffer byteBuffer = getObjectResponseResponseBytes.asByteBuffer();
+                                byteBuffer = null;
                                 getObjectResponseResponseBytes = null;
                             }
                         }
@@ -301,17 +306,23 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                             .build()
             ).completionFuture();
 
-            if (false) {
-                try {
-                    downloadCompletableFuture.get(600L, TimeUnit.MILLISECONDS);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new IOException("Could not open the path:" + key, e);
-                } catch (TimeoutException | ExecutionException e) {
-                    throw new IOException("Could not open the path:" + key, e);
+            try {
+                if (false) {
+                    try {
+                        downloadCompletableFuture.get(600L, TimeUnit.MILLISECONDS);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new IOException("Could not open the path:" + key, e);
+                    } catch (TimeoutException | ExecutionException e) {
+                        throw new IOException("Could not open the path:" + key, e);
+                    }
+                } else {
+                    downloadCompletableFuture.join();
                 }
-            } else {
-                downloadCompletableFuture.join();
+            } catch (Exception e) {
+                throw new IOException("Could not open the path:" + key, e);
+            } finally {
+                downloadCompletableFuture = null;
             }
 
 

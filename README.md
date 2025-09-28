@@ -75,7 +75,7 @@ system,false
 
 ### minio
 win 启动命令
-* E:\ruanjian\minio.exe server  D:\work\sso
+* E:\ruanjian\minio.exe server  F:\sso
 访问地址：http://127.0.0.1:9000
 
 
@@ -111,4 +111,10 @@ ssh-keygen -t rsa -b 2048 -C "your_email@example.com"
 ```
 
 
+### 使用堆外空间存储（直接存储）
+```
+需要在运行前添加jvm 参数：
+--add-opens java.base/java.nio=ALL-UNNAMED --add-exports java.base/jdk.internal.ref=ALL-UNNAMED --add-opens java.base/jdk.internal.ref=ALL-UNNAMED
+并修改配置文件，开启堆外存储
+```
 
