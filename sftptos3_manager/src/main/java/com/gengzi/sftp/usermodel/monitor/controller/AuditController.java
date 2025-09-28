@@ -45,6 +45,15 @@ public class AuditController {
         return Result.success(sftpConnectionAuditService.list(username, pageable));
     }
 
+    @PostMapping("/client/close")
+    @ResponseBody
+    public Result<?> clientClose(@RequestParam(required = true) String id) {
+        sftpConnectionAuditService.clientClose(id);
+        return Result.success(null);
+    }
+
+
+
     @GetMapping("/opt/list")
     @ResponseBody
     public Result<?> optList(@RequestParam(required = false) String clientName,

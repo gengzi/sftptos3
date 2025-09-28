@@ -91,4 +91,12 @@ public class SftpConnectionAudit {
     @Column(name = "create_time", nullable = false)
     private LocalDateTime createTime;
 
+    @Column(name = "manually_close_client")
+    private Byte manuallyCloseClient;
+
+    @Size(max = 32)
+    @NotNull
+    @Column(name = "auth_type", nullable = false, length = 32)
+    private String authType;
+
 }

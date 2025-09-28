@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.criteria.Predicate;
 import java.time.LocalDateTime;
@@ -87,5 +88,11 @@ public class SftpConnectionAuditServiceImpl implements SftpConnectionAuditServic
             }
         }
         return record;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void clientClose(String id) {
+        sftpConnectionAuditRepository.updateMultiCloseEventById(Long.parseLong(id));
     }
 }

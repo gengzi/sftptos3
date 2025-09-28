@@ -6,9 +6,6 @@ import com.gengzi.sftp.usermodel.dao.audit.StatisticsRecord;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
 /**
  * 审计sftp链接信息
  */
@@ -31,5 +28,6 @@ public interface SftpConnectionAuditService {
     StatisticsRecord statistics(StatisticsRecord record);
 
 
+    void clientClose(String id);
 
 }
