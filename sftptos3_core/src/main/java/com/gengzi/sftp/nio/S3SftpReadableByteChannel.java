@@ -76,21 +76,25 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
         // 构建缓存，并设置最大缓存数量  如果一个分片是64kb 最大设置20个。 意味着缓存中能存储1280kb
         this.readAheadBuffersCache = Caffeine.newBuilder()
                 .maximumSize(maxNumberFragments)
-                .expireAfterAccess(5, TimeUnit.MINUTES) // 5分钟未访问自动淘汰
+                .expireAfterAccess(3, TimeUnit.MINUTES) // 3分钟未访问自动淘汰
                 .weakValues() // 无强引用时允许GC回收
                 .recordStats()
                 .removalListener((Integer key, CompletableFuture<ByteBuffer> value, RemovalCause cause) -> {
                     logger.debug("Removed from cache: {}", key);
                     if (value != null && value.isDone()) {
                         try {
-                            S3DirectBufferUtil.freeDirectBuffer(value.get());
+                            ByteBuffer buffer = value.get();
+                            if(buffer != null && buffer.isDirect()){
+                                S3DirectBufferUtil.freeDirectBuffer(buffer);
+                            }
+                            buffer = null;
+                            value = null;
                         } catch (Exception e) {
                             value = null;
                             // 处理异常
                             logger.error("Error while cleaning up direct buffer: " + e.getMessage(), e);
                         }
                     }
-                    logger.debug("value :{}",value);
                 })
                 .build();
         // 最大分片数

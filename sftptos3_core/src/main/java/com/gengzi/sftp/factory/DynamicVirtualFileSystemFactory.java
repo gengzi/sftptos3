@@ -30,7 +30,7 @@ public class DynamicVirtualFileSystemFactory implements FileSystemFactory {
                 sessionContext.getAttribute(Constans.SERVERSESSIONUSERINFOCONTEXT);
 
         if (StorageType.LOCAL.type().equals(serverSessionUserInfoContext.getAccessStorageType())) {
-           return virtualFileSystemFactory.getDefaultHomeDir();
+            return virtualFileSystemFactory.getDefaultHomeDir();
 //            return NativeFileSystemFactory.INSTANCE.getUserHomeDir(sessionContext);
         }
 
@@ -54,6 +54,7 @@ public class DynamicVirtualFileSystemFactory implements FileSystemFactory {
         String username = sessionContext.getUsername();
         ServerSessionUserInfoContext serverSessionUserInfoContext =
                 sessionContext.getAttribute(Constans.SERVERSESSIONUSERINFOCONTEXT);
+        Boolean downloadFileUserDirectBuffer = sessionContext.getAttribute(Constans.DOWNLOADFILEUSERDIRECTBUFFER);
 
         if (StorageType.LOCAL.type().equals(serverSessionUserInfoContext.getAccessStorageType())) {
             virtualFileSystemFactory.setDefaultHomeDir(Path.of(serverSessionUserInfoContext.getUserRootPath()));
@@ -70,6 +71,7 @@ public class DynamicVirtualFileSystemFactory implements FileSystemFactory {
             env.put(S3SftpNioSpiConfiguration.CLIENT_NAME, S3ClientNameEnum.DEFAULT_AWS_S3);
             env.put(S3SftpNioSpiConfiguration.SESSION_CONTEXT, sessionContext);
             env.put(S3SftpNioSpiConfiguration.REGION, serverSessionUserInfoContext.getS3Region());
+            env.put(S3SftpNioSpiConfiguration.DOWNLOAD_FILE_USE_DIRECT_BUFFER, downloadFileUserDirectBuffer);
             URI s3Urix = URI.create(serverSessionUserInfoContext.getS3SftpSchemeUri());
             S3SftpFileSystemProvider s3FileSystemProvider = new S3SftpFileSystemProvider();
             FileSystem fileSystem = s3FileSystemProvider.newFileSystem(s3Urix, env);

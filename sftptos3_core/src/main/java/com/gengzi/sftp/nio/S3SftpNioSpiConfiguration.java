@@ -31,6 +31,9 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
     public static final String FILE_MAXNUMBERFRAGMENTS = "s3sftp.fileMaxNumberFragments";
     public static final int FILE_MAXNUMBERFRAGMENTS_VAL = 15;
 
+    // 下载文件时是否使用直接存储（堆外存储）
+    public static final String DOWNLOAD_FILE_USE_DIRECT_BUFFER = "s3sftp.downloadFileUseDirectBuffer";
+    public static final Boolean DOWNLOAD_FILE_USE_DIRECT_BUFFER_VAL = false;
 
     // 默认超时时间
     public static final String TIME_OUT = "s3sftp.timeout";
@@ -68,6 +71,7 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
         put(REGION, REGION_VAL);
         put(FILE_MAXFRAGMENTSIZE, FILE_MAXFRAGMENTSIZE_VAL);
         put(FILE_MAXNUMBERFRAGMENTS, FILE_MAXNUMBERFRAGMENTS_VAL);
+        put(DOWNLOAD_FILE_USE_DIRECT_BUFFER, DOWNLOAD_FILE_USE_DIRECT_BUFFER_VAL);
 
 
         // 覆盖默认配置
@@ -193,4 +197,9 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
     public int getFileMaxNumberFragments() {
         return (int) get(FILE_MAXNUMBERFRAGMENTS);
     }
+
+    public boolean getDownloadFileUseDirectBuffer() {
+        return (boolean) get(DOWNLOAD_FILE_USE_DIRECT_BUFFER);
+    }
+
 }

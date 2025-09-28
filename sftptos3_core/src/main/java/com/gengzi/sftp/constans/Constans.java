@@ -14,5 +14,7 @@ public class Constans {
             new AttributeRepository.AttributeKey<>();
     public static final AttributeRepository.AttributeKey<Throwable> SERVERSESSION_THROWABLE =
             new AttributeRepository.AttributeKey<>();
+    public static final AttributeRepository.AttributeKey<Boolean> DOWNLOADFILEUSERDIRECTBUFFER =
+            new AttributeRepository.AttributeKey<>();
 
 }

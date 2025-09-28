@@ -13,6 +13,7 @@ import org.apache.sshd.server.session.ServerSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -29,7 +30,11 @@ public class UserServerSession {
     @Autowired
     private SftpConnectionAuditService sftpConnectionAuditService;
 
+    @Value("${sftp.server.downloadFileUserDirectBuffer}")
+    private Boolean downloadFileUserDirectBuffer;
+
     public boolean addUserInfoToServerSession(User userByUsername, ServerSession serverSession){
+        serverSession.setAttribute(Constans.DOWNLOADFILEUSERDIRECTBUFFER, downloadFileUserDirectBuffer);
         Long attributeId = serverSession.getAttribute(Constans.SERVERSESSION_DB_IDKEY);
         String accessStorageType = userByUsername.getAccessStorageType();
         String accessStorageInfo = userByUsername.getAccessStorageInfo();

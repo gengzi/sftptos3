@@ -212,13 +212,11 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                         AsyncResponseTransformer.toBytes())
                 .thenApply(
                         getObjectResponseResponseBytes -> {
-                            try {
+                            boolean downloadFileUseDirectBuffer = this.configuration.getDownloadFileUseDirectBuffer();
+                            if (downloadFileUseDirectBuffer) {
                                 return S3DirectBufferUtil.toDirectBuffer(getObjectResponseResponseBytes);
-                            } finally {
-                                ByteBuffer byteBuffer = getObjectResponseResponseBytes.asByteBuffer();
-                                byteBuffer = null;
-                                getObjectResponseResponseBytes = null;
                             }
+                            return getObjectResponseResponseBytes.asByteBuffer();
                         }
                 );
     }

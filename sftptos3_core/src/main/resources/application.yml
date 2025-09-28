@@ -17,7 +17,7 @@ sftp:
   server:
     port: 2222
     customerOptAuditRecord: true
-    downloadFileUserDirectBuffer: true
+    downloadFileUserDirectBuffer: false
 
 ## 对象存储相关
 s3:
