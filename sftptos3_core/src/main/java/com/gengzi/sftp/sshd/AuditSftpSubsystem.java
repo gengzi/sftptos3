@@ -66,6 +66,25 @@ public class AuditSftpSubsystem extends SftpSubsystem {
     }
 
     /**
+     * 截取字符串的前maxChars个字符
+     *
+     * @param str      原始字符串
+     * @param maxChars 最大字符数
+     * @return 截取后的字符串
+     */
+    public static String substringByChars(String str, int maxChars) {
+        if (str == null || str.isEmpty()) {
+            return str;
+        }
+        // 如果字符串长度小于等于最大字符数，直接返回原字符串
+        if (str.length() <= maxChars) {
+            return str;
+        }
+        // 否则截取前maxChars个字符
+        return str.substring(0, maxChars);
+    }
+
+    /**
      * 重写doRead 方法，用于向审计表中插入读取文件的信息
      *
      * @param id
@@ -94,7 +113,8 @@ public class AuditSftpSubsystem extends SftpSubsystem {
         } catch (Exception e) {
             long size = fh.getFileChannel().size();
             long sftpAuditDbId = auditMap.get(handle).sftpAuditDbId;
-            sftpAuditRepository().updateReadEvent(String.valueOf(size), OperateStatus.FAILURE.getStatus(), e.getMessage(), LocalDateTime.now(), sftpAuditDbId);
+            sftpAuditRepository().updateReadEvent(String.valueOf(size), OperateStatus.FAILURE.getStatus(),
+                    substringByChars(e.getMessage(), 200), LocalDateTime.now(), sftpAuditDbId);
             throw e;
         }
         if (readLen <= 0) {
@@ -126,7 +146,8 @@ public class AuditSftpSubsystem extends SftpSubsystem {
         } catch (Exception e) {
             long size = fh.getFileChannel().size();
             long sftpAuditDbId = auditMap.get(handle).sftpAuditDbId;
-            sftpAuditRepository().updateReadEvent(String.valueOf(size), OperateStatus.FAILURE.getStatus(), e.getMessage(), LocalDateTime.now(), sftpAuditDbId);
+            sftpAuditRepository().updateReadEvent(String.valueOf(size), OperateStatus.FAILURE.getStatus(),
+                    substringByChars(e.getMessage(), 200), LocalDateTime.now(), sftpAuditDbId);
             throw e;
         }
 
@@ -159,7 +180,7 @@ public class AuditSftpSubsystem extends SftpSubsystem {
             super.doRemoveDirectory(id, path);
         } catch (Exception e) {
             sftpAuditRepository().updateReadEvent("", OperateStatus.FAILURE.getStatus(),
-                    e.getMessage(), LocalDateTime.now(), result.sftpAudit.getId());
+                    substringByChars(e.getMessage(), 200), LocalDateTime.now(), result.sftpAudit.getId());
             throw e;
         }
         sftpAuditRepository().updateReadEvent("", OperateStatus.SUCCESS.getStatus(),
@@ -173,7 +194,7 @@ public class AuditSftpSubsystem extends SftpSubsystem {
             super.doRemoveFile(id, path);
         } catch (Exception e) {
             sftpAuditRepository().updateReadEvent("", OperateStatus.FAILURE.getStatus(),
-                    e.getMessage(), LocalDateTime.now(), result.sftpAudit.getId());
+                    substringByChars(e.getMessage(), 200), LocalDateTime.now(), result.sftpAudit.getId());
             throw e;
         }
         sftpAuditRepository().updateReadEvent("", OperateStatus.SUCCESS.getStatus(),
@@ -187,14 +208,13 @@ public class AuditSftpSubsystem extends SftpSubsystem {
             super.doRename(id, oldPath, newPath, flags);
         } catch (Exception e) {
             sftpAuditRepository().updateReadEvent("", OperateStatus.FAILURE.getStatus(),
-                    e.getMessage(), LocalDateTime.now(), result.sftpAudit.getId());
+                    substringByChars(e.getMessage(), 200), LocalDateTime.now(), result.sftpAudit.getId());
             throw e;
         }
         sftpAuditRepository().updateReadEvent("", OperateStatus.SUCCESS.getStatus(),
                 "", LocalDateTime.now(), result.sftpAudit.getId());
 
     }
-
 
     @NotNull
     private Result initReadOrWriteAudit(FileHandle localHandle, OptType optType) {

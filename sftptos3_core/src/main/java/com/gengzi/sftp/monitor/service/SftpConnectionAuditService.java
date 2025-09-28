@@ -1,8 +1,8 @@
 package com.gengzi.sftp.monitor.service;
 
 import com.gengzi.sftp.dao.SftpConnectionAudit;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+
+import java.util.Set;
 
 /**
  * 审计sftp链接信息
@@ -17,7 +17,7 @@ public interface SftpConnectionAuditService {
      * @param username          用户名
      * @param authFailureReason 认证失败原因
      */
-    void authFailReasonEvent(Long id, String username, String authFailureReason);
+    void authFailReasonEvent(Long id, String username, String authFailureReason, String authType);
 
 
     /**
@@ -26,7 +26,7 @@ public interface SftpConnectionAuditService {
      * @param id       主键
      * @param username 用户名
      */
-    void authSuccessEvent(Long id, String username);
+    void authSuccessEvent(Long id, String username, String authType);
 
 
     /**
@@ -40,10 +40,19 @@ public interface SftpConnectionAuditService {
 
     /**
      * 断开会话
-     * @param id 主键
+     *
+     * @param id        主键
      * @param throwable 断开原因
      */
     void sessionClosedEvent(Long id, Throwable throwable);
+
+
+    /**
+     * 需要手动关闭的客户端链接
+     *
+     * @return
+     */
+    Set<Long> manuallyCloseClient(Set<Long> ids);
 
 
 }

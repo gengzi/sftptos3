@@ -7,6 +7,7 @@ import com.gengzi.sftp.dao.S3Storage;
 import com.gengzi.sftp.dao.S3StorageRepository;
 import com.gengzi.sftp.dao.User;
 import com.gengzi.sftp.enums.AuthFailureReason;
+import com.gengzi.sftp.enums.AuthType;
 import com.gengzi.sftp.enums.StorageType;
 import com.gengzi.sftp.monitor.service.SftpConnectionAuditService;
 import org.apache.sshd.server.session.ServerSession;
@@ -33,15 +34,25 @@ public class UserServerSession {
     @Value("${sftp.server.downloadFileUserDirectBuffer}")
     private Boolean downloadFileUserDirectBuffer;
 
-    public boolean addUserInfoToServerSession(User userByUsername, ServerSession serverSession){
+    public static String s3SftpSchemeUri(String accessKey, String accessSecret, String endpoint, String bucket) {
+        String endpointFormat = endpoint;
+        if (endpoint.startsWith("http://") || endpoint.startsWith("https://")) {
+            String result = endpoint.replaceFirst("^https://", "");
+            endpointFormat = result.replaceFirst("^http://", "");
+        }
+        return String.format("s3sftp://%s:%s@%s/%s", accessKey, accessSecret, endpointFormat, bucket);
+    }
+
+    public boolean addUserInfoToServerSession(User userByUsername, ServerSession serverSession) {
         serverSession.setAttribute(Constans.DOWNLOADFILEUSERDIRECTBUFFER, downloadFileUserDirectBuffer);
         Long attributeId = serverSession.getAttribute(Constans.SERVERSESSION_DB_IDKEY);
         String accessStorageType = userByUsername.getAccessStorageType();
         String accessStorageInfo = userByUsername.getAccessStorageInfo();
-        if(StorageType.S3.type().equals(accessStorageType)){
+        AuthType authType = serverSession.getAttribute(Constans.AUTHTYPE);
+        if (StorageType.S3.type().equals(accessStorageType)) {
             // 获取s3的存储信息
             Optional<S3Storage> storageOptional = storageRepository.findById(Long.valueOf(accessStorageInfo));
-            if(storageOptional.isPresent()){
+            if (storageOptional.isPresent()) {
                 S3Storage s3Storage = storageOptional.get();
                 String s3SftpSchemeUri = s3SftpSchemeUri(s3Storage.getAccessKey(),
                         s3Storage.getAccessSecret(),
@@ -55,11 +66,11 @@ public class UserServerSession {
                         s3SftpSchemeUri,
                         s3Storage.getRegion()
                 );
-                serverSession.setAttribute(Constans.SERVERSESSIONUSERINFOCONTEXT,serverSessionUserInfoContext);
+                serverSession.setAttribute(Constans.SERVERSESSIONUSERINFOCONTEXT, serverSessionUserInfoContext);
                 return true;
-            }else{
+            } else {
                 logger.error("s3Storage is empty");
-                sftpConnectionAuditService.authFailReasonEvent(attributeId,userByUsername.getUsername(), AuthFailureReason.SYS_NO_SUCH_USER.getReasonKey());
+                sftpConnectionAuditService.authFailReasonEvent(attributeId, userByUsername.getUsername(), AuthFailureReason.SYS_NO_SUCH_USER.getReasonKey(), authType.getType());
                 return false;
             }
         }
@@ -67,19 +78,10 @@ public class UserServerSession {
                 userByUsername.getUsername(),
                 userByUsername.getUserRootPath(),
                 userByUsername.getAccessStorageType(),
-                "",""
+                "", ""
         );
-        serverSession.setAttribute(Constans.SERVERSESSIONUSERINFOCONTEXT,serverSessionUserInfoContext);
+        serverSession.setAttribute(Constans.SERVERSESSIONUSERINFOCONTEXT, serverSessionUserInfoContext);
         return true;
-    }
-
-    public static String s3SftpSchemeUri(String accessKey,String accessSecret,String endpoint,String bucket) {
-        String endpointFormat = endpoint;
-        if(endpoint.startsWith("http://") || endpoint.startsWith("https://")){
-            String result = endpoint.replaceFirst("^https://", "");
-            endpointFormat = result.replaceFirst("^http://", "");
-        }
-        return String.format("s3sftp://%s:%s@%s/%s", accessKey, accessSecret, endpointFormat, bucket);
     }
 
 

@@ -4,12 +4,14 @@ import com.gengzi.sftp.dao.SftpAuditRepository;
 import com.gengzi.sftp.dao.SftpConnectionAudit;
 import com.gengzi.sftp.dao.SftpConnectionAuditRepository;
 import com.gengzi.sftp.enums.AuthStatus;
+import com.gengzi.sftp.enums.ManuallyCloseStatus;
 import com.gengzi.sftp.monitor.service.SftpConnectionAuditService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Service
 public class SftpConnectionAuditServiceImpl implements SftpConnectionAuditService {
@@ -20,6 +22,7 @@ public class SftpConnectionAuditServiceImpl implements SftpConnectionAuditServic
 
     @Autowired
     private SftpAuditRepository sftpAuditRepository;
+
     /**
      * 更新审计表：认证失败事件
      *
@@ -29,9 +32,9 @@ public class SftpConnectionAuditServiceImpl implements SftpConnectionAuditServic
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void authFailReasonEvent(Long id, String username, String authFailureReason) {
+    public void authFailReasonEvent(Long id, String username, String authFailureReason, String authType) {
         sftpConnectionAuditRepository.updateAuthFailReasonEventById(username,
-                AuthStatus.AUTH_FAIL.getStatus(), authFailureReason, id);
+                AuthStatus.AUTH_FAIL.getStatus(), authFailureReason, authType, id);
     }
 
     /**
@@ -42,9 +45,9 @@ public class SftpConnectionAuditServiceImpl implements SftpConnectionAuditServic
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void authSuccessEvent(Long id, String username) {
+    public void authSuccessEvent(Long id, String username, String authType) {
         sftpConnectionAuditRepository.updateAuthSuccessEventById(username,
-                AuthStatus.AUTH_SUCCESS.getStatus(), id);
+                AuthStatus.AUTH_SUCCESS.getStatus(), authType, id);
     }
 
     /**
@@ -67,7 +70,7 @@ public class SftpConnectionAuditServiceImpl implements SftpConnectionAuditServic
     /**
      * 断开会话
      *
-     * @param id               主键
+     * @param id        主键
      * @param throwable 断开原因
      */
     @Override
@@ -75,7 +78,19 @@ public class SftpConnectionAuditServiceImpl implements SftpConnectionAuditServic
     public void sessionClosedEvent(Long id, Throwable throwable) {
         if (throwable != null) {
             sftpConnectionAuditRepository.updateSessionClosedEventById(LocalDateTime.now(), throwable.getMessage(), id);
+            return;
         }
         sftpConnectionAuditRepository.updateSessionClosedEventById(LocalDateTime.now(), "Normal shutdown", id);
+    }
+
+    /**
+     * 需要手动关闭的客户端链接
+     *
+     * @param ids
+     * @return
+     */
+    @Override
+    public Set<Long> manuallyCloseClient(Set<Long> ids) {
+        return sftpConnectionAuditRepository.findIdByIdsAndManuallyCloseClient(ids, ManuallyCloseStatus.YES.getStatus());
     }
 }

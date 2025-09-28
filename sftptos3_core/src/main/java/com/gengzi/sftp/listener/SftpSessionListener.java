@@ -3,7 +3,9 @@ package com.gengzi.sftp.listener;
 import com.gengzi.sftp.config.SftpPublicKeyAuthenticator;
 import com.gengzi.sftp.constans.Constans;
 import com.gengzi.sftp.dao.SftpConnectionAudit;
+import com.gengzi.sftp.enums.AuthType;
 import com.gengzi.sftp.monitor.service.SftpConnectionAuditService;
+import com.gengzi.sftp.scheduled.ClientCloseTasks;
 import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.session.SessionListener;
 import org.apache.sshd.server.session.ServerSession;
@@ -58,6 +60,7 @@ public class SftpSessionListener implements SessionListener {
                     SftpConnectionAudit sftpConnectionAudit = new SftpConnectionAudit();
                     sftpConnectionAudit.setClientIp(hostAddress);
                     sftpConnectionAudit.setClientPort(inetSocketAddress.getPort());
+                    sftpConnectionAudit.setAuthType("");
                     Long id = sftpConnectionAuditService.KeyEstablishedEvent(sftpConnectionAudit);
                     session.setAttribute(Constans.SERVERSESSION_DB_IDKEY, id);
                 }
@@ -69,7 +72,10 @@ public class SftpSessionListener implements SessionListener {
                 ServerSession serverSession = (ServerSession) session;
                 String username = serverSession.getUsername();
                 Long attributeId = serverSession.getAttribute(Constans.SERVERSESSION_DB_IDKEY);
-                sftpConnectionAuditService.authSuccessEvent(attributeId, username);
+                AuthType authType = serverSession.getAttribute(Constans.AUTHTYPE);
+                sftpConnectionAuditService.authSuccessEvent(attributeId, username, authType.getType());
+                // 设置正在活动的session
+                ClientCloseTasks.activeSessions.put(attributeId, serverSession);
             }
         }
 
@@ -88,6 +94,8 @@ public class SftpSessionListener implements SessionListener {
             Long id = session.getAttribute(Constans.SERVERSESSION_DB_IDKEY);
             Throwable throwable = session.getAttribute(Constans.SERVERSESSION_THROWABLE);
             sftpConnectionAuditService.sessionClosedEvent(id, throwable);
+            // 移除
+            ClientCloseTasks.activeSessions.remove(id);
         }
         SessionListener.super.sessionClosed(session);
     }

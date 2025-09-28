@@ -1,6 +1,7 @@
 package com.gengzi.sftp.constans;
 
 import com.gengzi.sftp.context.ServerSessionUserInfoContext;
+import com.gengzi.sftp.enums.AuthType;
 import org.apache.sshd.common.AttributeRepository;
 
 
@@ -15,6 +16,8 @@ public class Constans {
     public static final AttributeRepository.AttributeKey<Throwable> SERVERSESSION_THROWABLE =
             new AttributeRepository.AttributeKey<>();
     public static final AttributeRepository.AttributeKey<Boolean> DOWNLOADFILEUSERDIRECTBUFFER =
+            new AttributeRepository.AttributeKey<>();
+    public static final AttributeRepository.AttributeKey<AuthType> AUTHTYPE =
             new AttributeRepository.AttributeKey<>();
 
 }

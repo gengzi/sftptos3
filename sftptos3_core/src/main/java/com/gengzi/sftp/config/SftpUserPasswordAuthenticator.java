@@ -4,6 +4,7 @@ import com.gengzi.sftp.constans.Constans;
 import com.gengzi.sftp.dao.User;
 import com.gengzi.sftp.dao.UserRepository;
 import com.gengzi.sftp.enums.AuthFailureReason;
+import com.gengzi.sftp.enums.AuthType;
 import com.gengzi.sftp.monitor.service.SftpConnectionAuditService;
 import com.gengzi.sftp.util.PasswordEncoderUtil;
 import org.apache.sshd.server.auth.AsyncAuthException;
@@ -35,17 +36,18 @@ public class SftpUserPasswordAuthenticator implements PasswordAuthenticator {
     public boolean authenticate(String username, String password, ServerSession serverSession) throws PasswordChangeRequiredException, AsyncAuthException {
         Long attributeId = serverSession.getAttribute(Constans.SERVERSESSION_DB_IDKEY);
         User userByUsername = userRepository.findUserByUsername(username);
-        if(userByUsername == null){
-            sftpConnectionAuditService.authFailReasonEvent(attributeId,username, AuthFailureReason.SYS_NO_SUCH_USER.getReasonKey());
+        if (userByUsername == null) {
+            sftpConnectionAuditService.authFailReasonEvent(attributeId, username, AuthFailureReason.SYS_NO_SUCH_USER.getReasonKey(), AuthType.PASSWD.getType());
             return false;
         }
-        if(!PasswordEncoderUtil.matchesPassword(password, userByUsername.getPasswd())){
-            sftpConnectionAuditService.authFailReasonEvent(attributeId,username, AuthFailureReason.SYS_NO_SUCH_USER.getReasonKey());
+        if (!PasswordEncoderUtil.matchesPassword(password, userByUsername.getPasswd())) {
+            sftpConnectionAuditService.authFailReasonEvent(attributeId, username, AuthFailureReason.SYS_NO_SUCH_USER.getReasonKey(), AuthType.PASSWD.getType());
             return false;
         }
-       return userServerSession.addUserInfoToServerSession(userByUsername,serverSession);
+        // 设置认证方式
+        serverSession.setAttribute(Constans.AUTHTYPE, AuthType.PASSWD);
+        return userServerSession.addUserInfoToServerSession(userByUsername, serverSession);
     }
-
 
 
 }
