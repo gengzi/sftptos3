@@ -16,6 +16,7 @@ import {
   Progress,
   Select,
   Input,
+  Modal,
 } from 'antd';
 import {
   DatabaseOutlined,
@@ -75,6 +76,8 @@ interface Client {
   authFailureReason: string | null;
   disconnectReason: string | null;
   createTime: string;
+  authType?: string; // 认证类型，可能返回passwd或publicKey
+  manuallyCloseClient?: number; // 手动关闭客户端标记，1表示已手动关闭
 }
 
 interface ServerResource {
@@ -406,6 +409,49 @@ const MonitorPage: React.FC = () => {
     fetchTrafficData(value);
   };
 
+  // 断开连接处理函数
+  const handleDisconnect = async (id: number) => {
+    // 先显示确认弹窗
+    Modal.confirm({
+      title: '确认断开连接',
+      content: '点击断开后，需等待SFTP服务退出资源后才会关闭链接。',
+      onOk: async () => {
+        try {
+          // 用户确认后，尝试断开会话
+          console.log('尝试断开会话，ID:', id);
+          
+          // 调用真实的断开连接API
+          const response = await request('/api/audit/client/close', {
+            method: 'POST',
+            headers: {
+              'accept': '*/*',
+            },
+            params: {
+              id: id // 直接使用ID字段值作为查询参数
+            },
+            data: {} // 空请求体
+          });
+          
+          // 检查响应结果
+          if (response && response.code === 200) {
+            console.log('断开会话成功，ID:', id);
+            // 断开成功后刷新数据
+            fetchData();
+          } else {
+            console.warn('断开会话失败，响应状态异常:', response);
+          }
+        } catch (error) {
+          console.error('断开连接请求失败:', error);
+        }
+      },
+      onCancel: () => {
+        console.log('用户取消断开操作');
+      },
+      okText: '确认',
+      cancelText: '取消'
+    });
+  };
+
   // 客户端表格列定义
   const clientColumns: ColumnsType<Client> = [
     {
@@ -453,6 +499,23 @@ const MonitorPage: React.FC = () => {
       )
     },
     {
+      title: '认证类型',
+      dataIndex: 'authType',
+      key: 'authType',
+      width: 80,
+      render: (authType: string | undefined) => {
+        if (!authType) return '-';
+        switch (authType) {
+          case 'passwd':
+            return '密码';
+          case 'publicKey':
+            return '公钥';
+          default:
+            return authType;
+        }
+      }
+    },
+    {
       title: '认证失败原因',
       dataIndex: 'authFailureReason',
       key: 'authFailureReason',
@@ -468,12 +531,28 @@ const MonitorPage: React.FC = () => {
       width: 120
     },
     {
-        title: '创建时间',
-        dataIndex: 'createTime',
-        key: 'createTime',
-        width: 160,
-        render: (time: string) => formatTime(time)
-      }
+      title: '操作',
+      key: 'action',
+      width: 100,
+      render: (_, record: Client) => {
+        // 判断条件：断开时间和断开原因为空，认证状态为成功，且不是手动关闭的客户端
+        const shouldShowDisconnectBtn = 
+          !record.disconnectTime && 
+          !record.disconnectReason && 
+          record.authStatus === 1 &&
+          record.manuallyCloseClient !== 1;
+          
+        return shouldShowDisconnectBtn ? (
+          <Button 
+              size="small" 
+              danger 
+              onClick={() => handleDisconnect(record.id)}
+            >
+              断开
+            </Button>
+        ) : null;
+      },
+    }
   ];
 
   // 文件操作表格列定义 - 根据新的API响应格式更新
