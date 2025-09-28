@@ -4,6 +4,7 @@ package com.gengzi.sftp.usermodel.monitor.service.impl;
 import com.gengzi.sftp.usermodel.dao.audit.SftpConnectionAudit;
 import com.gengzi.sftp.usermodel.dao.audit.SftpConnectionAuditRepository;
 import com.gengzi.sftp.usermodel.dao.audit.StatisticsRecord;
+import com.gengzi.sftp.usermodel.enums.AuthFailureReason;
 import com.gengzi.sftp.usermodel.enums.AuthStatus;
 import com.gengzi.sftp.usermodel.monitor.service.SftpConnectionAuditService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,8 +54,16 @@ public class SftpConnectionAuditServiceImpl implements SftpConnectionAuditServic
         };
 
 
-        return sftpConnectionAuditRepository.findAll(spec, pageable);
+        Page<SftpConnectionAudit> sftpConnectionAudits = sftpConnectionAuditRepository.findAll(spec, pageable);
 
+        sftpConnectionAudits.stream().forEach(audit -> {
+            AuthFailureReason authFailureReasonByReasonKey = AuthFailureReason.getAuthFailureReasonByReasonKey(audit.getAuthFailureReason());
+            if (authFailureReasonByReasonKey == null) {
+                return;
+            }
+            audit.setAuthFailureReason(authFailureReasonByReasonKey.getReason());
+        });
+        return sftpConnectionAudits;
     }
 
     /**

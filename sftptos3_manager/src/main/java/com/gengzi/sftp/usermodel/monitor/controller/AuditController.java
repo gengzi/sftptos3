@@ -27,17 +27,6 @@ public class AuditController {
     @Autowired
     private StatisticsRecordService statisticsRecordService;
 
-    /**
-     * 1, 登录数，认证成功，认证失败
-     * 2，下载文件数，下载成功，下载失败
-     * 3，上传文件数，上传成功，上传失败
-     * 4，删除文件数，删除成功，删除失败
-     * 5，创建目录数，创建成功，创建失败
-     *
-     * 流量：一小时统计一次 上传，下载，总流量
-     */
-
-
     @GetMapping("/client/list")
     @ResponseBody
     public Result<?> clientList(@RequestParam(required = false) String username,
