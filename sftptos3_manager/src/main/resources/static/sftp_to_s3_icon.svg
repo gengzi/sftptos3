@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- 背景圆 -->
+  <circle cx="256" cy="256" r="240" fill="#2383E2"/>
+  
+  <!-- SFTP 元素 - 文件图标 -->
+  <rect x="160" y="180" width="80" height="100" rx="10" fill="white"/>
+  <rect x="160" y="150" width="80" height="30" rx="5" fill="white"/>
+  <path d="M180 210h40M180 240h40M180 270h25" stroke="#2383E2" stroke-width="4"/>
+  
+  <!-- 箭头 -->
+  <polygon points="280,230 340,256 280,282" fill="white"/>
+  <path d="M260 256h140" stroke="white" stroke-width="4"/>
+  
+  <!-- S3 元素 - 存储桶图标 -->
+  <rect x="380" y="180" width="80" height="100" rx="10" fill="white"/>
+  <rect x="380" y="180" width="80" height="15" fill="#2383E2"/>
+  <rect x="380" y="210" width="80" height="15" fill="#2383E2"/>
+  <rect x="380" y="240" width="80" height="15" fill="#2383E2"/>
+  <rect x="380" y="270" width="80" height="15" fill="#2383E2"/>
+</svg>

@@ -9,6 +9,17 @@ repositories {
     mavenCentral()
 }
 
+springBoot {
+    mainClass = 'com.gengzi.sftp.usermodel.SftpManagerServerApplication'
+}
+
+bootJar {
+    // 确保主类被正确包含
+    manifest {
+        attributes 'Main-Class': 'org.springframework.boot.loader.JarLauncher'
+    }
+}
+
 dependencies {
     // spring相关
     implementation 'org.springframework.boot:spring-boot-starter'

@@ -69,9 +69,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .and()
                 .sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+
                 .and()
                 .authorizeRequests()
-                .antMatchers("/api/user/login","/api/user/loginout","/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**")
+                .antMatchers("/api/user/login","/api/user/loginout","/swagger-ui.html",
+                        "/swagger-ui/**", "/v3/api-docs/**","/", "/*.html",                  // 首页
+                        "/static/**",          "/**.css",         "/**.js",   "/**.svg",    // 静态资源目录（CSS、JS、图片等）
+                        "/favicon.ico",                      // 图标
+                        "/manifest.json",
+                        "/robots.txt"  )
                 .permitAll()
                 .anyRequest()
                 .authenticated();
@@ -89,7 +95,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(Arrays.asList("*")); // 允许的域名
         config.setAllowedHeaders(Arrays.asList("*"));        // 允许的请求头
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE")); // 允许的方法
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // 允许的方法
         config.setAllowCredentials(true);                    // 允许携带 Cookie
         config.setMaxAge(3600L);                            // 预检请求有效期
 

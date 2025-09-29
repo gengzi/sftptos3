@@ -5,6 +5,27 @@ plugins {
 group = 'com.gengzi'
 version = '0.0.1-SNAPSHOT'
 
+repositories {
+    // 优先使用国内仓库
+    maven { url 'https://maven.aliyun.com/repository/public' }
+    maven { url 'https://maven.aliyun.com/repository/spring' }
+    maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+    // 最后 fallback 到官方仓库
+    mavenCentral()
+    gradlePluginPortal()
+}
+
+springBoot {
+    mainClass = 'com.gengzi.sftp.SftpServerApplication'
+}
+
+bootJar {
+    // 确保主类被正确包含
+    manifest {
+        attributes 'Main-Class': 'org.springframework.boot.loader.JarLauncher'
+    }
+}
+
 dependencies {
     // spring相关
     implementation 'org.springframework.boot:spring-boot-starter'

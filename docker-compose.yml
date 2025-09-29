@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # 你的应用服务
+  app_core:
+    build:
+      context: .  # 指向Dockerfile所在目录
+      dockerfile: sftptos3_core/Dockerfile  # 你的应用Dockerfile
+    container_name: sftp-app
+    ports:
+      - "9988:9988"  # 应用端口映射
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/sftptos3?useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=111
+    depends_on:
+      - mysql  # 依赖MySQL，确保MySQL先启动
+    volumes:
+      - app-logs:/app/logs  # 挂载日志目录到宿主机
+
+  app_manager:
+    build:
+      context: .  # 指向Dockerfile所在目录
+      dockerfile: sftptos3_manager/Dockerfile  # 你的应用Dockerfile
+    container_name: sftp-manager
+    ports:
+      - "9977:9977"  # 应用端口映射
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/sftptos3?useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=111
+    depends_on:
+      - mysql  # 依赖MySQL，确保MySQL先启动
+    volumes:
+      - app-logs:/app/logs  # 挂载日志目录到宿主机
+
+
+
+  # MySQL服务
+  mysql:
+    image: mysql:8.0  # 使用官方MySQL镜像
+    container_name: sftp-mysql
+    ports:
+      - "3307:3306"  # MySQL端口映射
+    environment:
+      - MYSQL_ROOT_PASSWORD=111  # 根密码
+      - MYSQL_DATABASE=sftptos3  # 自动创建的数据库
+    volumes:
+      - mysql-data:/var/lib/mysql  # 数据持久化（重启不丢失数据）
+      - ./mysql-init:/docker-entrypoint-initdb.d  # 初始化脚本目录（可选）
+
+# 定义持久化卷
+volumes:
+  mysql-data:
+  app-logs:

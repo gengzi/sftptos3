@@ -5,8 +5,7 @@ import com.gengzi.sftp.factory.DynamicVirtualFileSystemFactory;
 import com.gengzi.sftp.listener.SftpSessionListener;
 import com.gengzi.sftp.listener.SftptoS3SftpEventListener;
 import com.gengzi.sftp.sshd.AuditSftpSubsystemFactory;
-import com.gengzi.sftp.util.ResourceUtils;
-import org.apache.sshd.common.keyprovider.FileKeyPairProvider;
+import org.apache.sshd.common.keyprovider.ClassLoadableResourceKeyPairProvider;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.sftp.server.SftpSubsystemFactory;
 import org.apache.sshd.sftp.server.UnsupportedAttributePolicy;
@@ -14,11 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.client.ResourceAccessException;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.Collections;
 
 
@@ -28,18 +24,10 @@ import java.util.Collections;
 @Configuration
 public class SftpServerConfig {
 
-    private static FileKeyPairProvider fileKeyPairProvider;
+    private static ClassLoadableResourceKeyPairProvider resourceKeyPairProvider;
 
     static {
-        try {
-            File file = ResourceUtils.readResource("hostkey.ser");
-            if (file == null) {
-                throw new ResourceAccessException("hostkey.ser not found");
-            }
-            fileKeyPairProvider = new FileKeyPairProvider(Paths.get(file.getAbsolutePath()));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        resourceKeyPairProvider = new ClassLoadableResourceKeyPairProvider("hostkey.ser");
     }
 
     @Value("${sftp.server.port}")
@@ -62,7 +50,7 @@ public class SftpServerConfig {
         // server.setHost("0.0.0.0");
         server.setPort(sftpPort);
         // 配置主机密钥
-        server.setKeyPairProvider(fileKeyPairProvider);
+        server.setKeyPairProvider(resourceKeyPairProvider);
         SftpSubsystemFactory factory;
         // 设置监听器
         if (customerOptAuditRecord) {
