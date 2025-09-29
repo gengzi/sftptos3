@@ -9,6 +9,7 @@ services:
     container_name: sftp-app
     ports:
       - "9988:9988"  # 应用端口映射
+      - "2222:2222"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/sftptos3?useSSL=false&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=root

@@ -32,7 +32,7 @@ RUN groupadd -r appgroup && \
     chown -R appuser:appgroup /app/logs /app/sftptos3_manager.jar
 USER appuser
 # 暴露端口（根据实际应用需要）
-EXPOSE 9988
+EXPOSE 9977
 # 启动命令
 # 在启动命令中添加JVM参数
 # 示例：设置堆内存、GC日志、编码等参数
