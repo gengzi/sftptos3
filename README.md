@@ -118,3 +118,17 @@ ssh-keygen -t rsa -b 2048 -C "your_email@example.com"
 并修改配置文件，开启堆外存储
 ```
 
+
+
+
+## 服务器部署方案
+* docker服务部署
+```angular2html
+
+```
+* 采用minio开源s3部署
+```angular2html
+-- 后台运行，监控台端口为9001，默认s3运行端口为9000
+nohup ./minio server /path/to/data   --console-address ":9001" > minio.log 2>&1 &
+```
+

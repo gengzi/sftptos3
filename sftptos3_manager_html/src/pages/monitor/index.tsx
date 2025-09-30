@@ -660,7 +660,7 @@ const MonitorPage: React.FC = () => {
         } else if (result === 4) {
           return (
             <Tag color="orange">
-              <ClockCircleOutlined style={{ marginRight: 4 }} /> 待执行
+              <ClockCircleOutlined style={{ marginRight: 4 }} /> 初始化
             </Tag>
           );
         } else {

@@ -8,7 +8,7 @@ public enum OperateStatus {
     SUCCESS(Byte.valueOf("1")),
     FAILURE(Byte.valueOf("2")),
     PROCESS(Byte.valueOf("3")),
-    PENDING(Byte.valueOf("4")),;
+    INIT(Byte.valueOf("4")),;
 
     private Byte status;
 

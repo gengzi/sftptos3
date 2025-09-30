@@ -127,7 +127,10 @@ public class UserServiceImpl implements UserService {
             UserPrincipal details = (UserPrincipal) authentication.getPrincipal();
             User updatedUser = user.get();
             updatedUser.setUsername(userInfoRequest.getUsername());
-            updatedUser.setPasswd(PasswordEncoderUtil.encodePassword(userInfoRequest.getPasswd()));
+            String passwd = userInfoRequest.getPasswd();
+            if(passwd != null && !passwd.isEmpty() && !passwd.equals(updatedUser.getPasswd())){
+                updatedUser.setPasswd(PasswordEncoderUtil.encodePassword(passwd));
+            }
             updatedUser.setUserRootPath(userInfoRequest.getUserRootPath());
             updatedUser.setAccessStorageType(userInfoRequest.getAccessStorageType());
             updatedUser.setAccessStorageInfo(userInfoRequest.getAccessStorageInfo());

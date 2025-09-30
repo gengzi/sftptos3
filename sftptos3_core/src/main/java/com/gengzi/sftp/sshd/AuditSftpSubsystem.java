@@ -61,7 +61,7 @@ public class AuditSftpSubsystem extends SftpSubsystem {
         sftpAudit.setFileSize("");
         Long attribute = session.getAttribute(Constans.SERVERSESSION_DB_IDKEY);
         sftpAudit.setClientAuditId(attribute);
-        sftpAudit.setOperateResult(OperateStatus.FAILURE.getStatus());
+        sftpAudit.setOperateResult(OperateStatus.INIT.getStatus());
         sftpAudit.setErrorMsg("");
     }
 
