@@ -6,7 +6,7 @@ services:
       dockerfile: sftptos3_core/Dockerfile  # 你的应用Dockerfile
     container_name: sftp-app
     ports:
-      - "9988:9988"  # 应用端口映射
+      - "8880:9988"  # 应用端口映射
       - "2222:2222"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/sftptos3?useSSL=false&allowPublicKeyRetrieval=true
@@ -24,7 +24,7 @@ services:
       dockerfile: sftptos3_manager/Dockerfile  # 你的应用Dockerfile
     container_name: sftp-manager
     ports:
-      - "9977:9977"  # 应用端口映射
+      - "8881:9977"  # 应用端口映射
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/sftptos3?useSSL=false&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=root

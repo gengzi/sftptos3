@@ -13,6 +13,7 @@ public class FrontendController {
             "/monitor",
             "/userManagement",
             "/user",
+            "/user/login",
             "/adminManagement"
     })
     public String forwardToIndex() {
