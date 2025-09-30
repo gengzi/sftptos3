@@ -201,7 +201,7 @@ export async function getUserDetails(id: string) {
         username: response.data.username,
         userRootPath: response.data.userRootPath,
         storageType: response.data.accessStorageType,
-        s3Link: response.data.accessStorageType === 's3' ? response.data.id : '',
+        s3Link: response.data.accessStorageType === 's3' ? response.data.accessStorageInfo : '',
         clientPublicKey: response.data.secretKey || '',
         createdAt: response.data.createTime,
       };
