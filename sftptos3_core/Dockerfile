@@ -24,6 +24,10 @@ WORKDIR /app
 RUN mkdir -p /app/logs && \
     # 关键步骤2：设置目录权限（避免权限不足）
     chmod 755 /app/logs
+
+## 创建本地目录，用于操作sftp的文件
+RUN mkdir -p /mnt/sftp_file && chmod 777 /mnt/sftp_file
+
 # 从构建阶段复制 JAR 包
 COPY --from=builder /home/gradle/project/sftptos3_core/build/libs/*.jar sftptos3_core_nosql.jar
 # 创建非 root 用户（安全最佳实践）

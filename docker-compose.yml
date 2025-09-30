@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 你的应用服务
   app_core:
@@ -18,6 +16,7 @@ services:
       - mysql  # 依赖MySQL，确保MySQL先启动
     volumes:
       - app-logs:/app/logs  # 挂载日志目录到宿主机
+      - sftp-dir:/mnt/sftp_file
 
   app_manager:
     build:
@@ -54,3 +53,5 @@ services:
 volumes:
   mysql-data:
   app-logs:
+  sftp-dir:
+

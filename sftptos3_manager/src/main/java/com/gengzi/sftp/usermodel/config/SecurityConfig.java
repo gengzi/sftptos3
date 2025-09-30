@@ -73,6 +73,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .and()
                 .authorizeRequests()
                 .antMatchers("/api/user/login","/api/user/loginout","/swagger-ui.html",
+                        "/adminManagement/**",
+                        "/icons/**",
+                        "/s3Management/**",
+                        "/monitor/**",
+                        "/user/**",
+                        "/userManagement/**",
                         "/swagger-ui/**", "/v3/api-docs/**","/", "/*.html",                  // 首页
                         "/static/**",          "/**.css",         "/**.js",   "/**.svg",    // 静态资源目录（CSS、JS、图片等）
                         "/favicon.ico",                      // 图标
