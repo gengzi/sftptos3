@@ -79,6 +79,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         "/monitor/**",
                         "/user/**",
                         "/userManagement/**",
+                        "/scripts/**",
                         "/swagger-ui/**", "/v3/api-docs/**","/", "/*.html",                  // 首页
                         "/static/**",          "/**.css",         "/**.js",   "/**.svg",    // 静态资源目录（CSS、JS、图片等）
                         "/favicon.ico",                      // 图标
