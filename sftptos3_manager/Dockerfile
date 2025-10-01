@@ -3,6 +3,7 @@
 FROM  gradle:7.6.1-jdk17 AS builder
 # 指定工作目录（Gradle 镜像默认的工作目录是 /home/gradle，使用该目录可避免权限问题）
 WORKDIR /home/gradle/project
+
 # 复制 Gradle 配置文件（优先复制以利用缓存）
 RUN mkdir -p ./sftptos3_manager
 # 复制父工程和子工程的 Gradle 配置（关键：多模块需包含父工程配置）
@@ -19,6 +20,8 @@ RUN gradle :sftptos3_manager:bootJar --no-daemon -x test
 # 第二阶段：运行环境
 FROM eclipse-temurin:17.0.16_8-jre
 WORKDIR /app
+# 设置时区为上海
+ENV TZ Asia/Shanghai
 # 关键步骤1：创建日志目录（/app/logs）
 RUN mkdir -p /app/logs && \
     # 关键步骤2：设置目录权限（避免权限不足）

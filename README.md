@@ -125,6 +125,10 @@ ssh-keygen -t rsa -b 2048 -C "your_email@example.com"
 * docker服务部署
 ```angular2html
 
+
+
+docker-compose up -d --build
+
 ```
 * 采用minio开源s3部署
 ```angular2html

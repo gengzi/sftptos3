@@ -45,11 +45,14 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=111  # 根密码
       - MYSQL_DATABASE=sftptos3  # 自动创建的数据库
+      - TZ=Asia/Shanghai         # 系统时区（容器OS时区）
+    command:
+      --default-time-zone=+08:00        # MySQL服务时区（UTC+8）
     volumes:
       - mysql-data:/var/lib/mysql  # 数据持久化（重启不丢失数据）
       - ./mysql-init:/docker-entrypoint-initdb.d  # 初始化脚本目录（可选）
 
-# 定义持久化卷
+# 定义持久化卷,持久化卷地址：/var/lib/docker/volumes
 volumes:
   mysql-data:
   app-logs:

@@ -20,6 +20,8 @@ RUN gradle :sftptos3_core:bootJar --no-daemon -x test
 # 第二阶段：运行环境
 FROM eclipse-temurin:17.0.16_8-jre
 WORKDIR /app
+# 设置时区为上海
+ENV TZ Asia/Shanghai
 # 关键步骤1：创建日志目录（/app/logs）
 RUN mkdir -p /app/logs && \
     # 关键步骤2：设置目录权限（避免权限不足）
