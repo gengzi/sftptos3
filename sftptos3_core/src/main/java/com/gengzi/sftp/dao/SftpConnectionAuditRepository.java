@@ -15,7 +15,7 @@ import java.util.Set;
 public interface SftpConnectionAuditRepository extends JpaRepository<SftpConnectionAudit, Long>, JpaSpecificationExecutor<SftpConnectionAudit> {
 
 
-    @Query("update SftpConnectionAudit s set s.username= :username ,s.authStatus = :authStatus,s.authType = :authType  where s.id = :id")
+    @Query("update SftpConnectionAudit s set s.authFailureReason = '',   s.username= :username ,s.authStatus = :authStatus,s.authType = :authType  where s.id = :id")
     @Modifying
     int updateAuthSuccessEventById(@Size(max = 64) @NotNull String username, Byte authStatus, String authType, Long id);
 
