@@ -39,7 +39,6 @@ RUN groupadd -r appgroup && \
     chown -R appuser:appgroup /app/logs /app/sftptos3_core_nosql.jar
 USER appuser
 # 暴露端口（根据实际应用需要）
-EXPOSE 9988
 EXPOSE 2222
 # 启动命令
 # 在启动命令中添加JVM参数

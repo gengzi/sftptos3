@@ -1,13 +1,13 @@
+
 services:
   # 你的应用服务
-  app_core:
+  app_core_one:
     build:
       context: .  # 指向Dockerfile所在目录
       dockerfile: sftptos3_core/Dockerfile  # 你的应用Dockerfile
-    container_name: sftp-app
+    container_name: sftp_core_one
     ports:
-      - "8880:9988"  # 应用端口映射
-      - "2222:2222"
+      - "2201:2222"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/sftptos3?useSSL=false&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=root
@@ -17,6 +17,41 @@ services:
     volumes:
       - app-logs:/app/logs  # 挂载日志目录到宿主机
       - /mnt/local:/mnt/sftp_file
+
+  app_core_two:
+    build:
+      context: .  # 指向Dockerfile所在目录
+      dockerfile: sftptos3_core/Dockerfile  # 你的应用Dockerfile
+    container_name: sftp_core_two
+    ports:
+      - "2202:2222"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/sftptos3?useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=111
+    depends_on:
+      - mysql  # 依赖MySQL，确保MySQL先启动
+    volumes:
+      - app-logs:/app/logs  # 挂载日志目录到宿主机
+      - /mnt/local:/mnt/sftp_file
+
+  app_core_three:
+    build:
+      context: .  # 指向Dockerfile所在目录
+      dockerfile: sftptos3_core/Dockerfile  # 你的应用Dockerfile
+    container_name: sftp_core_three
+    ports:
+      - "2203:2222"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/sftptos3?useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=111
+    depends_on:
+      - mysql  # 依赖MySQL，确保MySQL先启动
+    volumes:
+      - app-logs:/app/logs  # 挂载日志目录到宿主机
+      - /mnt/local:/mnt/sftp_file
+
 
   app_manager:
     build:
@@ -36,6 +71,7 @@ services:
 
 
 
+
   # MySQL服务
   mysql:
     image: mysql:8.0  # 使用官方MySQL镜像
@@ -51,6 +87,36 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql  # 数据持久化（重启不丢失数据）
       - ./mysql-init:/docker-entrypoint-initdb.d  # 初始化脚本目录（可选）
+
+
+  nginx:
+    # 使用官方 Nginx 镜像，可指定版本如 nginx:1.25-alpine
+    image: nginx:stable-alpine3.21-perl
+    container_name: sftptos3_nginx
+    ports:
+      - "80:80"   # 映射 HTTP 端口
+      - "2222:2222"
+    volumes:
+      # 挂载自定义 Nginx 配置文件
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # 挂载静态网站文件
+      - ./nginx/html:/usr/share/nginx/html:ro
+      # 挂载时区配置，保持时间同步
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=Asia/Shanghai  # 设置时区
+    depends_on:
+      - app_manager
+      - app_core_one
+      - app_core_two
+      - app_core_three
+
+
+
+
+
 
 # 定义持久化卷,持久化卷地址：/var/lib/docker/volumes
 volumes:
