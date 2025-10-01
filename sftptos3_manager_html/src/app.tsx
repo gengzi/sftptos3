@@ -31,7 +31,7 @@ export async function getInitialState(): Promise<{
   // 从 localStorage 中获取用户信息
   const storedUserInfo = localStorage.getItem('userInfo');
   let currentUser = undefined;
-  
+
   if (storedUserInfo) {
     try {
       currentUser = JSON.parse(storedUserInfo);

@@ -31,11 +31,46 @@ const UserForm = forwardRef(({ initialValues, onFinish, onCancel, formIdPrefix =
       if (response.success) {
         // 将返回的数据转换为Select选项格式，使用id作为value，s3Name作为label
         const links = response.data.map((item: any) => ({
-          value: item.id,
+          value: item.id.toString(), // 确保value是字符串类型
           label: item.s3Name
         }));
         setS3Links(links);
-        console.log('获取S3链接成功:', links);
+        console.log('获取S3链接成功，返回数据:', response.data);
+        console.log('转换后的S3链接选项:', links);
+        
+        // 如果当前是编辑模式且存储类型为s3，检查并纠正s3Link值
+        if (initialValues && initialValues.storageType === 's3' && initialValues.s3Link) {
+          // 检查initialValues中的s3Link值
+          console.log('检查initialValues中的s3Link值:', initialValues.s3Link);
+          
+          // 检查s3Link是否已存在于s3Links列表中
+          const isValidS3Link = links.some(link => link.value === initialValues.s3Link.toString());
+          
+          if (!isValidS3Link) {
+            console.warn('s3Link值不存在于S3链接列表中:', initialValues.s3Link);
+            // 尝试查找与s3Link值相关的S3配置
+            const matchingS3Link = links.find(link => 
+              link.label === initialValues.s3Link || 
+              link.value === initialValues.s3Link.toString() ||
+              link.value === initialValues.s3Link
+            );
+            
+            if (matchingS3Link) {
+              // 如果找到了匹配项，使用其ID
+              console.log('找到匹配的S3链接，ID:', matchingS3Link.value, '名称:', matchingS3Link.label);
+              const updatedValues = { ...initialValues, s3Link: matchingS3Link.value };
+              form.setFieldsValue(updatedValues);
+              console.log('已自动纠正并设置s3Link值:', updatedValues);
+            } else {
+              // 如果没有找到匹配项，设置表单值但保留原始s3Link值
+              console.log('未找到匹配的S3链接，使用原始值:', initialValues.s3Link);
+              form.setFieldsValue(initialValues);
+            }
+          } else {
+            console.log('s3Link值有效，直接设置表单值:', initialValues);
+            form.setFieldsValue(initialValues);
+          }
+        }
       } else {
         console.error('获取s3存储链接失败:', response.message);
         // 如果获取失败，设置为空数组
@@ -52,20 +87,20 @@ const UserForm = forwardRef(({ initialValues, onFinish, onCancel, formIdPrefix =
   // 专门监听initialValues变化，确保编辑模式下表单值正确更新
   useEffect(() => {
     if (initialValues) {
+      console.log('initialValues发生变化:', initialValues);
       // 处理s3Link值，确保与下拉框选项匹配
       const formattedValues = { ...initialValues };
       
       // 确保s3Link字段存在且有值时，先获取S3链接列表
       if (formattedValues.storageType === 's3' && formattedValues.s3Link) {
-        // 先获取S3链接列表，然后再设置表单值
-        fetchS3Links().then(() => {
-          form.setFieldsValue(formattedValues);
-          console.log('表单值已更新:', formattedValues);
-        });
+        console.log('检测到存储类型为s3且s3Link有值，准备获取S3链接列表...');
+        // 先获取S3链接列表
+        fetchS3Links();
+        // 注意：表单值的设置现在移到了fetchS3Links函数内部，确保在数据加载完成后再设置
       } else {
-        // 当initialValues存在且发生变化时，使用setFieldsValue更新表单值
+        // 当存储类型不是s3或s3Link没有值时，直接设置表单值
+        console.log('存储类型不是s3或s3Link没有值，直接设置表单值:', formattedValues);
         form.setFieldsValue(formattedValues);
-        console.log('表单值已更新:', formattedValues);
       }
     }
   }, [initialValues, form]);
@@ -237,10 +272,30 @@ const UserForm = forwardRef(({ initialValues, onFinish, onCancel, formIdPrefix =
               <Select 
                 placeholder="请选择s3存储链接"
                 loading={loadingS3Links}
+                // 添加onBlur事件监听，用于调试和日志记录
+                onBlur={(value) => {
+                  console.log('s3Link输入框失焦，当前值:', value);
+                }}
+                // 添加showSearch属性，允许用户搜索选项
+                showSearch
+                // 自定义选项过滤逻辑，提高匹配成功率
+                filterOption={(input, option) =>
+                  option?.label.toLowerCase().includes(input.toLowerCase()) ||
+                  option?.value.toString().includes(input)
+                }
+                // 设置maxTagCount为0，确保始终显示完整选项
+                maxTagCount={0}
               >
+                {/* 渲染S3链接选项 */}
                 {s3Links.map(link => (
                   <Option key={link.value} value={link.value}>{link.label}</Option>
                 ))}
+                {/* 如果initialValues中有s3Link值但不在选项列表中，添加一个临时选项 */}
+                {initialValues && initialValues.s3Link && !s3Links.some(link => link.value === initialValues.s3Link.toString()) && (
+                  <Option key="temp-option" value={initialValues.s3Link.toString()}>
+                    {`[系统值] ${initialValues.s3Link}`}
+                  </Option>
+                )}
               </Select>
             </Form.Item>
           ) : null;
