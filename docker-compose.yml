@@ -118,10 +118,6 @@ services:
     # 2. 配置系统参数（对应 --sysctl net.ipv4.ip_forward=1）
     sysctls:
       - net.ipv4.ip_forward=1  # 开启 IP 转发（透明代理必需）
-    # 3. 构建时预先配置 setcap（如果需要在构建阶段设置权限）
-    build:
-      context: .
-      dockerfile: nginx/Dockerfile  # 指向包含 setcap 命令的 Dockerfile
     restart: unless-stopped
 
 
