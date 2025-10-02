@@ -35,7 +35,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     // sftp服务相关
-    implementation 'org.apache.sshd:sshd-sftp:3.0.0-M1'
+    // https://mvnrepository.com/artifact/org.apache.sshd/sshd
+    implementation("org.apache.sshd:sshd:2.16.0")
+    implementation 'org.apache.sshd:sshd-sftp:2.16.0'
     implementation("io.projectreactor:reactor-core:3.8.0-M6")
     // s3相关
     implementation 'software.amazon.awssdk:netty-nio-client:2.32.16'
