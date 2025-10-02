@@ -112,12 +112,6 @@ services:
       - app_core_one
       - app_core_two
       - app_core_three
-    # 1. 添加必要的 Linux  capabilities（对应 --cap-add=NET_ADMIN）
-    cap_add:
-      - NET_ADMIN  # 允许修改网络配置（如 iptables、IP 转发）
-    # 2. 配置系统参数（对应 --sysctl net.ipv4.ip_forward=1）
-    sysctls:
-      - net.ipv4.ip_forward=1  # 开启 IP 转发（透明代理必需）
     restart: unless-stopped
 
 
