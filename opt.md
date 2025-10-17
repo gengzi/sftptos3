@@ -11,11 +11,9 @@
 * 某个sftptos3容器挂掉，nginx自动去掉该配置，调用其他存活的服务
 将某个ip自动映射到某台服务中
 * 增加ip白名单机制，只有白名单中的ip才能访问系统
-
 * 优化jvm，发现占用的堆内存比较大
-
-
 * 定时任务，定时删除7天的前的临时文件（如果开启审计，加入到审计中）
+* 支持对用户配置可读或者可写的权限，禁止覆盖文件等等个性化
 
 
 
@@ -216,11 +214,9 @@ ssh-keygen -t rsa -b 2048 -C "your_email@example.com"
 
 
 ## 服务器部署方案
+k8s + docker + jenkins
 * docker服务部署
 ```angular2html
-
-
-
 docker-compose up -d --build
 
 ```
