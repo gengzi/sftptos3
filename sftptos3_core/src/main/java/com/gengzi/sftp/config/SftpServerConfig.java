@@ -5,7 +5,10 @@ import com.gengzi.sftp.factory.DynamicVirtualFileSystemFactory;
 import com.gengzi.sftp.listener.SftpSessionListener;
 import com.gengzi.sftp.listener.SftptoS3SftpEventListener;
 import com.gengzi.sftp.sshd.AuditSftpSubsystemFactory;
+import org.apache.sshd.common.PropertyResolverUtils;
 import org.apache.sshd.common.keyprovider.ClassLoadableResourceKeyPairProvider;
+import org.apache.sshd.common.session.SessionHeartbeatController;
+import org.apache.sshd.core.CoreModuleProperties;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.session.SessionFactory;
 import org.apache.sshd.sftp.SftpModuleProperties;
@@ -17,7 +20,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -53,7 +58,25 @@ public class SftpServerConfig {
         server.setPort(sftpPort);
         // 启用PROXY协议支持
         server.setServerProxyAcceptor(new ProxyProtocolAcceptor());
-//        SftpModuleProperties.COPY_BUF_SIZE.set(server,65536);
+        SftpModuleProperties.COPY_BUF_SIZE.set(server,65536);
+        CoreModuleProperties.IDLE_TIMEOUT.set(server, Duration.ofMinutes(15));
+        CoreModuleProperties.NIO2_READ_TIMEOUT.set(server, Duration.ofMinutes(20));
+
+        // 修正点：设置心跳机制
+        // HeartbeatType.KEEP_ALIVE : 发送 SSH_MSG_IGNORE 或类似包保持连接
+        // 60, TimeUnit.SECONDS   : 每 60 秒发一次
+        server.setSessionHeartbeat(SessionHeartbeatController.HeartbeatType.IGNORE, TimeUnit.SECONDS, 60);
+
+        // 5. [新增] 窗口大小 (Window Size) - 核心性能参数
+        // SSH 协议有自己的流控窗口。默认值较小，对于 S3 这种高延迟写入
+        // 需要调大窗口，让客户端在等待服务器 ACK 时能继续发数据，提高吞吐量。
+        // 建议设置 2MB ~ 4MB (太大会导致内存溢出，太小速度跑不起来)
+        CoreModuleProperties.WINDOW_SIZE.set(server, 1 * 1024 * 1024L); // 4MB
+
+        // 6. [新增] 最大包大小 (Max Packet Size)
+        // 配合上面的 Copy Buffer，允许客户端发送更大的数据包
+        CoreModuleProperties.MAX_PACKET_SIZE.set(server, 65536L);
+
         // 配置主机密钥
         server.setKeyPairProvider(resourceKeyPairProvider);
         SftpSubsystemFactory factory;
