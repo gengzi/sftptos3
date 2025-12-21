@@ -18,7 +18,7 @@ RUN echo "Force rebuild at $(date)"  # 利用时间戳变化打破缓存
 RUN gradle :sftptos3_core:bootJar --no-daemon -x test
 
 # 第二阶段：运行环境
-FROM eclipse-temurin:17.0.16_8-jre
+FROM eclipse-temurin:17-jdk
 WORKDIR /app
 # 设置时区为上海
 ENV TZ Asia/Shanghai
@@ -42,6 +42,8 @@ USER appuser
 EXPOSE 2222
 # 启动命令
 # 在启动命令中添加JVM参数
+ENV JAVA_OPTS="-Xms4m -Xmx4m -XX:+UseG1GC  -XX:NativeMemoryTracking=detail -XX:+UnlockDiagnosticVMOptions    -XX:MaxMetaspaceSize=512m -XX:+UseContainerSupport -XX:MaxGCPauseMillis=200 -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/app/logs/dump-oom.hprof -Xlog:gc*:file=/app/logs/gc.log:time,tags,level:filecount=10,filesize=100M -Xlog:safepoint:file=/app/logs/safepoint.log:time,tags:filecount=5,filesize=20M "
+
 # 示例：设置堆内存、GC日志、编码等参数
-CMD ["java","-jar", "sftptos3_core_nosql.jar"]
+CMD java $JAVA_OPTS -jar sftptos3_core_nosql.jar
 

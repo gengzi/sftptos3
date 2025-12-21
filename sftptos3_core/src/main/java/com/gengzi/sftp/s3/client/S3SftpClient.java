@@ -3,6 +3,7 @@ package com.gengzi.sftp.s3.client;
 import com.gengzi.sftp.nio.S3SftpNioSpiConfiguration;
 import com.gengzi.sftp.s3.client.entity.ListObjectsResponse;
 import com.gengzi.sftp.s3.client.entity.ObjectHeadResponse;
+import reactor.core.publisher.Flux;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -46,6 +47,17 @@ public interface S3SftpClient<T> {
      * @return
      */
     CompletableFuture<ByteBuffer> getObject(String bucketName, String key, long offset, long length);
+
+    /**
+     * Stream object content as a reactive Flux with backpressure support.
+     *
+     * @param bucketName bucket
+     * @param key        object key
+     * @param offset     start offset
+     * @param length     length to read
+     * @return Flux of ByteBuffer chunks
+     */
+    Flux<ByteBuffer> getObjectFlux(String bucketName, String key, long offset, long length);
 
 
     /**

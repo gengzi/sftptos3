@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sftptos3-config
+  namespace: prod
+data:
+  # kv format
+  db.url: "jdbc:mysql://192.168.31.131:3306/sftptos3?useSSL=false&allowPublicKeyRetrieval=true"

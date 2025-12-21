@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sftptos3-service
+  namespace: prod
+spec:
+  selector:
+    # template.labels.app
+    app: sftptos3-deployment
+  ports:
+    - protocol: TCP
+      ### 对集群内其他服务暴露的端口号
+      port: 2222
+      targetPort: 2222
+  type: NodePort
+  

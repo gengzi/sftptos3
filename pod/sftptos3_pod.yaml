@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tomcat9
+  labels:
+    role: tomcat9
+spec:
+  containers:
+    - name: tomcat9
+      image: 9.0.112-jdk17-corretto-al2
+      # 如果本地镜像有，就使用本地镜像
+      imagePullPolicy: IfNotPresent
+      ports:
+        - name: tomcat9
+          containerPort: 8078
+          protocol: TCP
+          # 从不重启
+  restartPolicy: Never
+  

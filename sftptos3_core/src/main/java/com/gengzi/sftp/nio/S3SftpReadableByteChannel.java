@@ -10,6 +10,7 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Flux;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -24,6 +25,9 @@ import java.util.stream.Collectors;
 
 /**
  * 定义s3 sftp 读通道
+ *
+ *  下载文件
+ *
  */
 public class S3SftpReadableByteChannel implements ReadableByteChannel {
 
@@ -80,21 +84,22 @@ public class S3SftpReadableByteChannel implements ReadableByteChannel {
                 .weakValues() // 无强引用时允许GC回收
                 .recordStats()
                 .removalListener((Integer key, CompletableFuture<ByteBuffer> value, RemovalCause cause) -> {
-                    logger.debug("Removed from cache: {}", key);
-                    if (value != null && value.isDone()) {
-                        try {
-                            ByteBuffer buffer = value.get();
-                            if(buffer != null && buffer.isDirect()){
-                                S3DirectBufferUtil.freeDirectBuffer(buffer);
-                            }
-                            buffer = null;
-                            value = null;
-                        } catch (Exception e) {
-                            value = null;
-                            // 处理异常
-                            logger.error("Error while cleaning up direct buffer: " + e.getMessage(), e);
-                        }
-                    }
+                    // TODO 移除这个逻辑，让jvm自行回收。但是限制 限制堆外总大小，适当的 Heap 大小
+//                    logger.debug("Removed from cache: {}", key);
+//                    if (value != null && value.isDone()) {
+//                        try {
+//                            ByteBuffer buffer = value.get();
+//                            if(buffer != null && buffer.isDirect()){
+//                                S3DirectBufferUtil.freeDirectBuffer(buffer);
+//                            }
+//                            buffer = null;
+//                            value = null;
+//                        } catch (Exception e) {
+//                            value = null;
+//                            // 处理异常
+//                            logger.error("Error while cleaning up direct buffer: " + e.getMessage(), e);
+//                        }
+//                    }
                 })
                 .build();
         // 最大分片数

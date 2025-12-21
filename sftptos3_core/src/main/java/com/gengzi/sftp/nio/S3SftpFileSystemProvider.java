@@ -471,16 +471,19 @@ public class S3SftpFileSystemProvider extends FileSystemProvider {
     }
 
     void closeFileSystem(FileSystem fs) {
-        for (var key : FS_CACHE.keySet()) {
-            if (fs == FS_CACHE.get(key)) {
-                try (FileSystem closeable = FS_CACHE.remove(key)) {
-                    closeFileSystemIfOpen(closeable);
-                    return;
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+        synchronized (FS_CACHE) {
+            for (var key : FS_CACHE.keySet()) {
+                if (fs == FS_CACHE.get(key)) {
+                    try (FileSystem closeable = FS_CACHE.remove(key)) {
+                        closeFileSystemIfOpen(closeable);
+                        return;
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             }
         }
+
         try {
             closeFileSystemIfOpen(fs);
         } catch (IOException e) {

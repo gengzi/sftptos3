@@ -12,6 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
@@ -44,6 +45,12 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
 
     private static final char PATH_SEPARATOR_CHAR = Constants.PATH_SEPARATOR.charAt(0);
     private static final Logger logger = LoggerFactory.getLogger(DefaultAwsS3SftpClient.class);
+    // 构建 Netty HTTP 客户端，注入自定义 EventLoopGroup
+    private static final NettyNioAsyncHttpClient nettyHttpClient = (NettyNioAsyncHttpClient) NettyNioAsyncHttpClient.builder()
+            .eventLoopGroup(SdkEventLoopGroup.create(NettyEventGroup.CUSTOMEVENTLOOPGROUP)) // 注入自定义线程池
+            .connectionTimeout(Duration.ofSeconds(10)) // 连接超时
+            .maxConcurrency(500) // 最大并发连接数（默认 100，可根据线程数调整）
+            .build();
 
     public DefaultAwsS3SftpClient(S3SftpNioSpiConfiguration s3SftpNioSpiConfiguration) {
         super(s3SftpNioSpiConfiguration);
@@ -168,13 +175,6 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
 
     @Override
     public S3AsyncClient createClient(S3SftpNioSpiConfiguration s3SftpNioSpiConfiguration) {
-        // 构建 Netty HTTP 客户端，注入自定义 EventLoopGroup
-        NettyNioAsyncHttpClient nettyHttpClient = (NettyNioAsyncHttpClient) NettyNioAsyncHttpClient.builder()
-                .eventLoopGroup(SdkEventLoopGroup.create(NettyEventGroup.CUSTOMEVENTLOOPGROUP)) // 注入自定义线程池
-                .connectionTimeout(Duration.ofSeconds(10)) // 连接超时
-                .maxConcurrency(500) // 最大并发连接数（默认 100，可根据线程数调整）
-                .build();
-
         return S3AsyncClient.builder()
                 .region(Region.of(s3SftpNioSpiConfiguration.region()))
                 .endpointOverride(s3SftpNioSpiConfiguration.endpointUri())
@@ -214,11 +214,32 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                         getObjectResponseResponseBytes -> {
                             boolean downloadFileUseDirectBuffer = this.configuration.getDownloadFileUseDirectBuffer();
                             if (downloadFileUseDirectBuffer) {
+                                // 从堆内到堆外，会发生 用户态到内核态的数据拷贝，上下文切换
                                 return S3DirectBufferUtil.toDirectBuffer(getObjectResponseResponseBytes);
                             }
                             return getObjectResponseResponseBytes.asByteBuffer();
                         }
                 );
+        // 流示处理
+    }
+
+    @Override
+    public Flux<ByteBuffer> getObjectFlux(String bucketName, String key, long offset, long length) {
+        logger.debug("getObjectFlux bucketName:{},key:{},offset:{},length:{}", bucketName, key, offset, length);
+        long readFrom = offset;
+        long readTo = offset + length - 1;
+        String range = "bytes=" + readFrom + "-" + readTo;
+        logger.debug("byte range for {} is '{}'", key, range);
+        S3AsyncClient s3AsyncClient = this.s3Client;
+
+        return Mono.fromFuture(
+                        s3AsyncClient.getObject(
+                                builder -> builder
+                                        .bucket(bucketName)
+                                        .key(key)
+                                        .range(range),
+                                AsyncResponseTransformer.toPublisher()))
+                .flatMapMany(Flux::from);
     }
 
     /**

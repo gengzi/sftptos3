@@ -7,8 +7,11 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.channels.WritableByteChannel;
@@ -34,6 +37,7 @@ public class S3SftpWritableByteChannel implements WritableByteChannel {
 
     // 定义是否已经force了
     private boolean isForce = false;
+
 
 
     public S3SftpWritableByteChannel(S3SftpPath s3SftpPath, S3SftpClient s3Client,
@@ -121,6 +125,11 @@ public class S3SftpWritableByteChannel implements WritableByteChannel {
      */
     @Override
     public int write(ByteBuffer src) throws IOException {
+        // TODO 每次数据都是32kb,每次都写入文件太频繁，进行合并写入 扩展到128kb 写入一次
+        // TODO 需要看下这个写入的内容是 直接内存还是堆内存
+
+
+
         return channel.write(src);
     }
 

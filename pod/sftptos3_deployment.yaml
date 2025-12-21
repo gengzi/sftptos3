@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+# 元数据：定义名称和命名空间（建议按环境划分）
+metadata:
+  name: sftptos3-deployment
+  namespace: prod
+  labels:
+    app: sftptos3-deployment
+spec:
+  replicas: 1
+  # 标签选择器：用于匹配 Pod（必须和 template.metadata.labels 一致）
+  selector:
+    matchLabels:
+      app: sftptos3-deployment
+  template:
+    metadata:
+      name: sftptos3-deployment
+      labels:
+        app: sftptos3-deployment
+    spec:
+      containers:
+        - name: sftptos3-deployment
+          image: sftptos3-app_core_one:latest
+          imagePullPolicy: Never   # ← 关键！告诉 k8s 别去远程拉，用本地镜像
+          ports:
+            - containerPort: 2222
+          env:
+            - name: SPRING_DATASOURCE_URL
+              valueFrom: # 从 ConfigMap 获取
+                configMapKeyRef:
+                  name: sftptos3-config        # ConfigMap 名字
+                  key: db.url               # ConfigMap 中的 key
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom: # 从 ConfigMap 获取
+                secretKeyRef:
+                  name: sftptos3-secret       # ConfigMap 名字
+                  key: db.username
+            - name: SPRING_DATASOURCE_PASSWORD             # 数据库密码（敏感信息）
+              valueFrom: # 从 Secret 获取
+                secretKeyRef:
+                  name: sftptos3-secret        # Secret 名字
+                  key: db.password          # Secret 中的 key
+
+#            # ⭐ 启动探针：防止应用启动慢被误杀（如加载大模型、连接 DB）
+#          startupProbe:
+#            httpGet:
+#              path: /actuator/health/liveness  # Spring Boot Actuator 的 liveness 端点
+#              port: 2222                       # 容器端口
+#            failureThreshold: 30               # 最多失败 30 次（30 * periodSeconds = 总等待时间）
+#            periodSeconds: 5                   # 每 5 秒探测一次 → 最多等 150 秒
+#
+#          # ⭐ 就绪探针：检查是否准备好接收流量（依赖服务是否就绪）
+#          readinessProbe:
+#            httpGet:
+#              path: /actuator/health/readiness # readiness 端点
+#              port: 2222
+#            initialDelaySeconds: 10            # Pod 启动后等 10 秒再开始探测
+#            periodSeconds: 5                   # 每 5 秒一次
+#            timeoutSeconds: 3                  # 单次探测超时时间（默认 1s，可适当调大）
+#            successThreshold: 1                # 成功 1 次就算就绪（默认）
+#            failureThreshold: 3                # 连续失败 3 次才标记为未就绪
+#
+#          # ⭐ 存活探针：检查应用是否卡死（只检查自身，不要依赖外部服务！）
+#          livenessProbe:
+#            httpGet:
+#              path: /actuator/health/liveness
+#              port: 2222
+#            initialDelaySeconds: 20            # 启动后等 20 秒再开始（避免启动期误判）
+#            periodSeconds: 15                  # 每 15 秒一次
+#            timeoutSeconds: 5
+#            failureThreshold: 3                # 连续失败 3 次 → 重启 Pod！
+
+          # 资源请求与限制（非常重要！避免资源争抢）
+          resources:
+            requests:
+              memory: "256Mi"   # 申请 256MB 内存（调度依据）
+              cpu: "100m"       # 申请 0.1 个 CPU（1000m = 1 core）
+            limits:
+              memory: "512Mi"   # 最多用 512MB，超了会被 OOMKilled
+              cpu: "500m"       # 最多用 0.5 个 CPU，超了会被限流
+      restartPolicy: Always
+
+
+      

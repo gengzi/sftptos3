@@ -8,6 +8,7 @@ import com.gengzi.sftp.sshd.AuditSftpSubsystemFactory;
 import org.apache.sshd.common.keyprovider.ClassLoadableResourceKeyPairProvider;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.session.SessionFactory;
+import org.apache.sshd.sftp.SftpModuleProperties;
 import org.apache.sshd.sftp.server.SftpSubsystemFactory;
 import org.apache.sshd.sftp.server.UnsupportedAttributePolicy;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +53,7 @@ public class SftpServerConfig {
         server.setPort(sftpPort);
         // 启用PROXY协议支持
         server.setServerProxyAcceptor(new ProxyProtocolAcceptor());
+//        SftpModuleProperties.COPY_BUF_SIZE.set(server,65536);
         // 配置主机密钥
         server.setKeyPairProvider(resourceKeyPairProvider);
         SftpSubsystemFactory factory;

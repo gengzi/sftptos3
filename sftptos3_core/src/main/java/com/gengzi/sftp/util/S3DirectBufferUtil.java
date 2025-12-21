@@ -5,8 +5,11 @@ import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+
+
 
 public class S3DirectBufferUtil {
 
@@ -66,8 +69,39 @@ public class S3DirectBufferUtil {
             logger.debug("DirectBuffer freed");
         } catch (Exception e) {
             // 忽略反射异常（不同JDK版本可能有差异）
-            logger.error("Failed to free DirectBuffer: " + e.getMessage());
+            logger.error("Failed to free 从: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    private static final sun.misc.Unsafe UNSAFE;
+
+    static {
+        try {
+            // Unsafe 是单例且私有的，必须通过反射获取
+            Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+            unsafeField.setAccessible(true);
+            UNSAFE = (sun.misc.Unsafe) unsafeField.get(null);
+        } catch (Exception e) {
+            throw new RuntimeException("无法获取 sun.misc.Unsafe 实例", e);
+        }
+    }
+    /**
+     * JDK 17+ 推荐的释放方式
+     * 不需要强转 sun.nio.ch.DirectBuffer，也不需要 --add-opens
+     */
+    public static void clean(ByteBuffer byteBuffer) {
+        if (!byteBuffer.isDirect()) {
+            return; // 堆内内存不需要手动释放，交给 GC
+        }
+
+        // 核心方法：invokeCleaner
+        // 它可以处理 ByteBuffer 关联的 Cleaner，甚至是切片（Slice）后的 View
+        try {
+            UNSAFE.invokeCleaner(byteBuffer);
+        } catch (IllegalArgumentException e) {
+            // 某些 Duplicate/Slice 的 buffer 可能没有 cleaner，或者已经是 invalid 的
+            // 生产环境可以打个 warn 日志
         }
     }
 }

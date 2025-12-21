@@ -27,9 +27,9 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
     // 下载文件时分片大小
     public static final String FILE_MAXFRAGMENTSIZE = "s3sftp.fileMaxFragmentSize";
     // 默认64kb
-    public static final int FILE_MAXFRAGMENTSIZE_VAL = 128 * 1024;
+    public static final int FILE_MAXFRAGMENTSIZE_VAL = 1024 * 1024;
     public static final String FILE_MAXNUMBERFRAGMENTS = "s3sftp.fileMaxNumberFragments";
-    public static final int FILE_MAXNUMBERFRAGMENTS_VAL = 15;
+    public static final int FILE_MAXNUMBERFRAGMENTS_VAL = 3;
 
     // 下载文件时是否使用直接存储（堆外存储）
     public static final String DOWNLOAD_FILE_USE_DIRECT_BUFFER = "s3sftp.downloadFileUseDirectBuffer";
@@ -187,6 +187,12 @@ public class S3SftpNioSpiConfiguration extends HashMap<String, Object> {
     public String getStroageInfo() {
         String username = sessionContext().getUsername();
         return String.format("%s:%s/%s", username, getEndpoint(), bucketName);
+    }
+
+
+    public String getS3ClientInfo() {
+        String username = sessionContext().getUsername();
+        return String.format("%s:%s/%s/%s/%s/%s", username, endpointUri(), region(), accessKey(), secretKey(), bucketName);
     }
 
 
