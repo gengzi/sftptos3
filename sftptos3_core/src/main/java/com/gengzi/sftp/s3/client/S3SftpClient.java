@@ -16,7 +16,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * s3 对象存储客户端提供者
  */
-public interface S3SftpClient<T> {
+public interface S3SftpClient<T> extends AutoCloseable{
 
 
     /**
@@ -141,4 +141,8 @@ public interface S3SftpClient<T> {
      * @return 如果无此对象，必须返回 null
      */
     ObjectHeadResponse headObject(String bucketName, String key) throws IOException;
+
+
+    @Override
+    void close() throws Exception;
 }

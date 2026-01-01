@@ -46,14 +46,17 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
     private static final char PATH_SEPARATOR_CHAR = Constants.PATH_SEPARATOR.charAt(0);
     private static final Logger logger = LoggerFactory.getLogger(DefaultAwsS3SftpClient.class);
     // 构建 Netty HTTP 客户端，注入自定义 EventLoopGroup
-    private static final NettyNioAsyncHttpClient nettyHttpClient = (NettyNioAsyncHttpClient) NettyNioAsyncHttpClient.builder()
+    private static final NettyNioAsyncHttpClient NETTY_HTTP_CLIENT = (NettyNioAsyncHttpClient) NettyNioAsyncHttpClient.builder()
             .eventLoopGroup(SdkEventLoopGroup.create(NettyEventGroup.CUSTOMEVENTLOOPGROUP)) // 注入自定义线程池
             .connectionTimeout(Duration.ofSeconds(10)) // 连接超时
             .maxConcurrency(500) // 最大并发连接数（默认 100，可根据线程数调整）
             .build();
+    private S3TransferManager s3TransferManager = null;
+
 
     public DefaultAwsS3SftpClient(S3SftpNioSpiConfiguration s3SftpNioSpiConfiguration) {
         super(s3SftpNioSpiConfiguration);
+        s3TransferManager = S3TransferManager.builder().s3Client(this.s3Client).build();
     }
 
     private static boolean isDirectoryString(String path) {
@@ -183,7 +186,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                 ))
                 .serviceConfiguration(service -> service
                         .pathStyleAccessEnabled(true)
-                ).httpClient(nettyHttpClient)
+                ).httpClient(NETTY_HTTP_CLIENT)
                 .build();
     }
 
@@ -290,17 +293,17 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
      */
     @Override
     public CompletableFuture<?> copyObject(String sourceBucketName, String sourceKey, String destinationBucketName, String destinationKey) {
-        try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(this.s3Client).build()) {
-            return s3TransferManager.copy(CopyRequest.builder()
-                    .copyObjectRequest(CopyObjectRequest.builder()
-                            .checksumAlgorithm(ChecksumAlgorithm.SHA256)
-                            .sourceBucket(sourceBucketName)
-                            .sourceKey(sourceKey)
-                            .destinationBucket(destinationBucketName)
-                            .destinationKey(destinationKey)
-                            .build())
-                    .build()).completionFuture();
-        }
+
+        return s3TransferManager.copy(CopyRequest.builder()
+                .copyObjectRequest(CopyObjectRequest.builder()
+                        .checksumAlgorithm(ChecksumAlgorithm.SHA256)
+                        .sourceBucket(sourceBucketName)
+                        .sourceKey(sourceKey)
+                        .destinationBucket(destinationBucketName)
+                        .destinationKey(destinationKey)
+                        .build())
+                .build()).completionFuture();
+
     }
 
     /**
@@ -314,38 +317,36 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
     @Override
     public void getObjectAndWriteToLocalFile(String bucketName, String key, Path destination) throws IOException {
         logger.info("getObjectAndWriteToLocalFile bucketName:{},key:{},Path:{} ", bucketName, key, destination);
-        try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(this.s3Client).build()) {
-            CompletableFuture<CompletedFileDownload> downloadCompletableFuture = s3TransferManager.downloadFile(
-                    DownloadFileRequest.builder()
-                            .getObjectRequest(GetObjectRequest.builder()
-                                    .bucket(bucketName)
-                                    .key(key)
-                                    .build())
-                            .destination(destination)
-                            .build()
-            ).completionFuture();
+        CompletableFuture<CompletedFileDownload> downloadCompletableFuture = s3TransferManager.downloadFile(
+                DownloadFileRequest.builder()
+                        .getObjectRequest(GetObjectRequest.builder()
+                                .bucket(bucketName)
+                                .key(key)
+                                .build())
+                        .destination(destination)
+                        .build()
+        ).completionFuture();
 
-            try {
-                if (false) {
-                    try {
-                        downloadCompletableFuture.get(600L, TimeUnit.MILLISECONDS);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        throw new IOException("Could not open the path:" + key, e);
-                    } catch (TimeoutException | ExecutionException e) {
-                        throw new IOException("Could not open the path:" + key, e);
-                    }
-                } else {
-                    downloadCompletableFuture.join();
+        try {
+            if (false) {
+                try {
+                    downloadCompletableFuture.get(600L, TimeUnit.MILLISECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException("Could not open the path:" + key, e);
+                } catch (TimeoutException | ExecutionException e) {
+                    throw new IOException("Could not open the path:" + key, e);
                 }
-            } catch (Exception e) {
-                throw new IOException("Could not open the path:" + key, e);
-            } finally {
-                downloadCompletableFuture = null;
+            } else {
+                downloadCompletableFuture.join();
             }
-
-
+        } catch (Exception e) {
+            throw new IOException("Could not open the path:" + key, e);
+        } finally {
+            downloadCompletableFuture = null;
         }
+
+
     }
 
     /**
@@ -359,18 +360,19 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
     @Override
     public void putObjectByLocalFile(String bucketName, String key, Path localFile) throws IOException {
         logger.info("putObjectByLocalFile bucketName:{},key:{},Path:{} ", bucketName, key, localFile);
-        try (S3TransferManager s3TransferManager = S3TransferManager.builder().s3Client(this.s3Client).build()) {
-            CompletableFuture<CompletedFileUpload> uploadCompletableFuture = s3TransferManager.uploadFile(
-                    UploadFileRequest.builder()
-                            .putObjectRequest(PutObjectRequest.builder()
-                                    .bucket(bucketName)
-                                    .key(key)
-                                    .contentType(Files.probeContentType(localFile))
-                                    .build())
-                            .source(localFile)
-                            .build()
-            ).completionFuture();
 
+        CompletableFuture<CompletedFileUpload> uploadCompletableFuture = s3TransferManager.uploadFile(
+                UploadFileRequest.builder()
+                        .putObjectRequest(PutObjectRequest.builder()
+                                .bucket(bucketName)
+                                .key(key)
+                                .contentType(Files.probeContentType(localFile))
+                                .build())
+                        .source(localFile)
+                        .build()
+        ).completionFuture();
+
+        try {
             // TODO: 上传文件超时配置新增
             if (false) {
                 // 在超时时间内等待获取结果
@@ -384,7 +386,7 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
             // 调用此方法，重新设置中断标志位为 true
             Thread.currentThread().interrupt();
             throw new IOException("Could not write to path:" + key, e);
-        } catch (TimeoutException | ExecutionException | IOException e) {
+        } catch (TimeoutException | ExecutionException e) {
             throw new IOException("Could not write to path:" + key, e);
         }
     }
@@ -495,4 +497,10 @@ public class DefaultAwsS3SftpClient extends AbstractS3SftpClient<S3AsyncClient> 
                 .delimiter(Constants.PATH_SEPARATOR));
     }
 
+
+    @Override
+    public void close() throws Exception {
+        s3TransferManager.close();
+        s3Client.close();
+    }
 }

@@ -9,6 +9,7 @@ import org.apache.sshd.common.PropertyResolverUtils;
 import org.apache.sshd.common.keyprovider.ClassLoadableResourceKeyPairProvider;
 import org.apache.sshd.common.session.SessionHeartbeatController;
 import org.apache.sshd.core.CoreModuleProperties;
+import org.apache.sshd.netty.NettyIoServiceFactoryFactory;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.session.SessionFactory;
 import org.apache.sshd.sftp.SftpModuleProperties;
@@ -53,6 +54,7 @@ public class SftpServerConfig {
     @Bean
     public SshServer sftpServer() throws IOException {
         SshServer server = SshServer.setUpDefaultServer();
+        server.setIoServiceFactoryFactory(new NettyIoServiceFactoryFactory());
         // 监听所有请求，默认支持
         // server.setHost("0.0.0.0");
         server.setPort(sftpPort);
@@ -71,7 +73,7 @@ public class SftpServerConfig {
         // SSH 协议有自己的流控窗口。默认值较小，对于 S3 这种高延迟写入
         // 需要调大窗口，让客户端在等待服务器 ACK 时能继续发数据，提高吞吐量。
         // 建议设置 2MB ~ 4MB (太大会导致内存溢出，太小速度跑不起来)
-        CoreModuleProperties.WINDOW_SIZE.set(server, 1 * 1024 * 1024L); // 4MB
+        CoreModuleProperties.WINDOW_SIZE.set(server, 1 * 1024 * 1024L); // 1MB
 
         // 6. [新增] 最大包大小 (Max Packet Size)
         // 配合上面的 Copy Buffer，允许客户端发送更大的数据包

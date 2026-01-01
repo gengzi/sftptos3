@@ -2,6 +2,8 @@ package com.gengzi.sftp.s3.client;
 
 
 import com.gengzi.sftp.nio.S3SftpNioSpiConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Constructor;
 import java.util.concurrent.ConcurrentHashMap;
@@ -10,7 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * s3工程类，根据不同的s3系统创建对应的客户端
  */
 public class S3ClientFactory {
-    static final ConcurrentHashMap<String, Class<? extends S3SftpClient>> allS3Client = new ConcurrentHashMap<>();
+    private static final Logger logger = LoggerFactory.getLogger(S3ClientFactory.class);
+    private static final ConcurrentHashMap<String, Class<? extends S3SftpClient>> allS3Client = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, S3SftpClient> CACHE = new ConcurrentHashMap();
 
     static {
@@ -43,4 +46,13 @@ public class S3ClientFactory {
     }
 
 
+    public static void closeClient() {
+        CACHE.values().forEach(s3SftpClient -> {
+            try {
+                s3SftpClient.close();
+            } catch (Exception e) {
+                logger.error("关闭s3客户端失败", e);
+            }
+        });
+    }
 }
